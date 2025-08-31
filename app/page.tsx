@@ -10,7 +10,7 @@ export default function Home() {
 				{/* Header */}
 				<div className="text-center space-y-2">
 					<h1 className="text-3xl font-heading font-bold text-foreground">
-						Jimbao
+						Jimboa
 					</h1>
 					<p className="text-muted-foreground">
 						Bon, tu vas trainer ici longtemps ? Connecte-toi, bordel !
