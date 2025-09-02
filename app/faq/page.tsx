@@ -38,7 +38,9 @@ export default function FAQPage() {
 							className="bg-card rounded-xl border border-border/50 overflow-hidden"
 						>
 							<AccordionTrigger className="px-4 py-4 text-left font-heading-semibold text-card-foreground hover:bg-card/80 hover:no-underline">
-								<span className="text-sm leading-tight pr-2">{item.question}</span>
+								<span className="text-sm leading-tight pr-2">
+									{item.question}
+								</span>
 							</AccordionTrigger>
 							<AccordionContent className="px-4 pb-4">
 								<div className="text-sm text-muted-foreground leading-relaxed border-t border-border/30 pt-3">
