@@ -23,7 +23,7 @@ export function PageHeader({
 				className
 			)}
 		>
-			<div className="container max-w-2xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
+			<div className="container max-w-sm mx-auto px-4 py-4 sm:px-4 sm:py-4">
 				{/* Mobile and desktop: horizontal layout with back button, content, and action */}
 				<div className="flex items-start space-x-3 sm:space-x-4">
 					{/* Back button section - on the left */}

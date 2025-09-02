@@ -16,7 +16,7 @@ export default async function NewGroupPage() {
 				description="Donnez un nom à votre nouveau groupe"
 			/>
 
-			<PageContainer className="pt-20 sm:pt-24 pb-8">
+			<PageContainer withContainer className="pt-20 sm:pt-24 pb-8">
 				<CreateGroupForm />
 			</PageContainer>
 		</>

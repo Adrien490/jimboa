@@ -16,7 +16,7 @@ export default async function JoinGroupPage() {
 				description="Entrez le code d'invitation pour rejoindre un groupe existant"
 			/>
 
-			<PageContainer className="pt-20 sm:pt-24 pb-8">
+			<PageContainer withContainer className="pt-20 sm:pt-24 pb-8">
 				<JoinGroupForm />
 			</PageContainer>
 		</>
