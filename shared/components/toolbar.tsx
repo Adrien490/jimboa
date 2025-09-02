@@ -19,10 +19,10 @@ export function Toolbar({ children, className }: ToolbarProps) {
 					// Style de la toolbar avec effets visuels
 					"bg-card/40 backdrop-blur-md border border-border/30",
 					"rounded-2xl shadow-2xl",
-					// Padding et hauteur optimisés
-					"h-14",
-					// Flexbox pour le contenu avec gap
-					"flex items-center gap-3",
+					// Padding et hauteur optimisés pour PWA
+					"h-12",
+					// Flexbox pour le contenu avec gap réduit pour PWA
+					"flex items-center gap-2 px-3",
 					// Effets de glow subtils
 					"before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/5 before:via-purple-500/5 before:to-pink-500/5 before:rounded-2xl before:blur-xl before:opacity-50",
 					// Interactions et transitions

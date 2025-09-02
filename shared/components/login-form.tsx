@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { useSignIn } from "@clerk/nextjs";
-import { Apple, Eye, EyeOff } from "lucide-react";
+import { Apple, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
@@ -130,10 +130,18 @@ export function LoginForm() {
 			)}
 			<Button
 				type="submit"
+				size="lg"
 				disabled={isSubmitting}
-				className="w-full bg-white text-black hover:bg-white/90"
+				className="w-full h-14 text-base font-semibold bg-white text-black hover:bg-white/90 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
 			>
-				{isSubmitting ? "Connexion…" : "Login"}
+				{isSubmitting ? (
+					<>
+						<Loader2 className="w-5 h-5 mr-3 animate-spin" />
+						Connexion en cours...
+					</>
+				) : (
+					"Se connecter"
+				)}
 			</Button>
 
 			<div className="flex items-center gap-3">

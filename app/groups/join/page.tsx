@@ -1,10 +1,10 @@
-import { CreateGroupForm } from "@/domains/group/features/create-group/create-group-form";
+import { JoinGroupForm } from "@/domains/group/features/join-group/join-group-form";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default async function NewGroupPage() {
+export default async function JoinGroupPage() {
 	const { userId } = await auth();
 	if (!userId) redirect("/");
 
@@ -12,12 +12,12 @@ export default async function NewGroupPage() {
 		<>
 			<PageHeader
 				showBackButton
-				title="Créer un groupe"
-				description="Donnez un nom à votre nouveau groupe"
+				title="Rejoindre un groupe"
+				description="Entrez le code d'invitation pour rejoindre un groupe existant"
 			/>
 
 			<PageContainer className="pt-20 sm:pt-24 pb-8">
-				<CreateGroupForm />
+				<JoinGroupForm />
 			</PageContainer>
 		</>
 	);

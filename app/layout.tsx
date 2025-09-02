@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
+import { Toaster } from "sonner";
 import { ConvexClientProvider } from "../shared/providers/convex-client-provider";
 import "./globals.css";
 
@@ -67,6 +68,25 @@ export default function RootLayout({
 								</div>
 							</main>
 						</div>
+						<Toaster
+							position="top-center"
+							expand={false}
+							visibleToasts={3}
+							richColors
+							closeButton
+							className="toaster-custom"
+							toastOptions={{
+								className: "toast-custom",
+								duration: 4000,
+								style: {
+									background: "hsl(var(--card))",
+									border: "1px solid hsl(var(--border))",
+									borderRadius: "12px",
+									backdropFilter: "blur(12px)",
+									boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+								},
+							}}
+						/>
 					</ConvexClientProvider>
 				</body>
 			</html>

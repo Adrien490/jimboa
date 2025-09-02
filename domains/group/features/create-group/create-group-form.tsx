@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/shared/components/ui/button";
 import {
 	Form,
 	FormControl,
@@ -9,6 +10,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/shared/components/ui/form";
+import { Input } from "@/shared/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
 import { Camera, Loader2, Plus, X } from "lucide-react";
@@ -18,22 +20,7 @@ import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-
-const createGroupSchema = z.object({
-	name: z
-		.string()
-		.trim()
-		.min(1, "Le nom du groupe est requis")
-		.min(2, "Le nom doit contenir au moins 2 caractères")
-		.max(100, "Le nom ne peut pas dépasser 100 caractères")
-		.refine(
-			(name) => name.length > 0 && name.trim().length > 0,
-			"Le nom ne peut pas être vide"
-		),
-	image: z.instanceof(File).optional(),
-});
+import { createGroupSchema } from "./create-group-schema";
 
 type CreateGroupFormValues = z.infer<typeof createGroupSchema>;
 
@@ -60,8 +47,9 @@ export function CreateGroupForm() {
 		if (file) {
 			if (file.size > 5 * 1024 * 1024) {
 				// 5MB limit
-				toast.error("L'image est trop volumineuse", {
-					description: "La taille maximale est de 5MB",
+				toast.error("Image trop lourde", {
+					description: "Maximum 5MB",
+					duration: 3000,
 				});
 				return;
 			}
@@ -95,8 +83,9 @@ export function CreateGroupForm() {
 
 			await createGroup({ name: values.name, imageId });
 
-			toast.success("Groupe créé avec succès !", {
-				description: `Le groupe "${values.name}" a été créé.`,
+			toast.success("Groupe créé !", {
+				description: `"${values.name}" est prêt 🚀`,
+				duration: 3000,
 			});
 
 			form.reset();
@@ -107,8 +96,9 @@ export function CreateGroupForm() {
 					? error.message
 					: "Une erreur inattendue s'est produite";
 
-			toast.error("Erreur lors de la création du groupe", {
+			toast.error("Échec de création", {
 				description: errorMessage,
+				duration: 4000,
 			});
 
 			console.error("Erreur création groupe:", error);
@@ -215,29 +205,21 @@ export function CreateGroupForm() {
 						</ul>
 					</div>
 
-					<div className="flex gap-3 pt-2">
-						<Button
-							type="button"
-							variant="outline"
-							className="flex-1"
-							onClick={() => router.back()}
-							disabled={isSubmitting}
-						>
-							Annuler
-						</Button>
+					<div className="pt-4">
 						<Button
 							type="submit"
-							className="flex-1"
+							size="lg"
+							className="w-full h-14 text-base font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
 							disabled={isSubmitting || !isValid}
 						>
 							{isSubmitting ? (
 								<>
-									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-									Création...
+									<Loader2 className="w-5 h-5 mr-3 animate-spin" />
+									Création en cours...
 								</>
 							) : (
 								<>
-									<Plus className="w-4 h-4 mr-2" />
+									<Plus className="w-5 h-5 mr-3" />
 									Créer le groupe
 								</>
 							)}

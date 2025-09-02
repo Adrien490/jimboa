@@ -7,7 +7,7 @@ import { Toolbar } from "@/shared/components/toolbar";
 import { Button } from "@/shared/components/ui/button";
 import { auth } from "@clerk/nextjs/server";
 import { preloadQuery } from "convex/nextjs";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Users } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -48,18 +48,32 @@ export default async function GroupsPage() {
 				</div>
 			</PageContainer>
 
-			{/* Toolbar with Search and Create Group Button */}
+			{/* Toolbar with Search and Action Buttons */}
 			<Toolbar>
 				<SearchForm
 					paramName="search"
 					placeholder="Rechercher..."
-					className="flex-1"
+					className="flex-1 min-w-0"
 				/>
 
+				<Link href="/groups/join">
+					<Button
+						size="sm"
+						variant="outline"
+						className="h-10 w-10 p-0 rounded-xl bg-card/60 backdrop-blur-md border-2 border-border/50 text-foreground shadow-xl hover:bg-card/80 hover:border-border/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+						title="Rejoindre un groupe"
+					>
+						<Users className="w-4 h-4" />
+					</Button>
+				</Link>
+
 				<Link href="/groups/new">
-					<Button className="h-12 px-3 rounded-xl bg-primary backdrop-blur-md border-2 border-primary/50 text-white font-heading-semibold text-sm shadow-xl hover:bg-primary/80 hover:border-primary/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap">
-						<Plus className="w-4 h-4 mr-1" />
-						Créer
+					<Button
+						size="sm"
+						className="h-10 w-10 p-0 rounded-xl bg-primary backdrop-blur-md border-2 border-primary/50 text-white shadow-xl hover:bg-primary/80 hover:border-primary/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+						title="Créer un groupe"
+					>
+						<Plus className="w-4 h-4" />
 					</Button>
 				</Link>
 			</Toolbar>
