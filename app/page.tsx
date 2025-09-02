@@ -50,7 +50,7 @@ export default function Home() {
 					</div>
 
 					{/* Features Grid */}
-					<div className="w-full max-w-sm space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+					<div className="w-full max-w-md space-y-3 sm:space-y-4 mb-8 sm:mb-12">
 						{features.map((feature, index) => {
 							const Icon = feature.icon;
 							return (
@@ -84,7 +84,7 @@ export default function Home() {
 					</div>
 
 					{/* CTA Section */}
-					<div className="w-full max-w-sm space-y-4 sm:space-y-6">
+					<div className="w-full max-w-md space-y-4 sm:space-y-6">
 						<GoogleSignInButton />
 
 						<p className="text-xs sm:text-sm text-center text-muted-foreground px-4">

@@ -15,10 +15,10 @@ export function Toolbar({ children, className }: ToolbarProps) {
 			<div
 				className={cn(
 					// Container principal avec design moderne
-					"relative mx-auto max-w-sm",
+					"relative mx-auto max-w-md",
 					// Style de la toolbar avec effets visuels
-					"bg-card/40 backdrop-blur-md border border-border/30",
-					"rounded-2xl shadow-2xl",
+					"bg-transparent",
+					"rounded-2xl",
 					// Padding et hauteur optimisés pour PWA
 					"h-12",
 					// Flexbox pour le contenu avec gap réduit pour PWA
@@ -26,7 +26,6 @@ export function Toolbar({ children, className }: ToolbarProps) {
 					// Effets de glow subtils
 					"before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/5 before:via-purple-500/5 before:to-pink-500/5 before:rounded-2xl before:blur-xl before:opacity-50",
 					// Interactions et transitions
-					"hover:bg-card/60 hover:shadow-3xl hover:border-border/50",
 					"transition-all duration-300 ease-out",
 					// Safe area pour mobile
 					"mb-safe",

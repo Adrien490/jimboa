@@ -39,10 +39,7 @@ export function GroupList({
 					}
 					action={
 						<Link href="/groups/new">
-							<Button
-								size="lg"
-								className="h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-							>
+							<Button size="lg" className="h-12 px-6 rounded-xl shadow-lg">
 								<Plus className="w-5 h-5 mr-2" />
 								Créer un groupe
 							</Button>
@@ -65,10 +62,7 @@ export function GroupList({
 				action={
 					<div className="flex flex-col sm:flex-row gap-3 justify-center">
 						<Link href="/groups/new">
-							<Button
-								size="lg"
-								className="h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-							>
+							<Button size="lg" className="h-12 px-6 rounded-xl shadow-lg">
 								<Plus className="w-5 h-5 mr-2" />
 								Créer un groupe
 							</Button>
@@ -77,7 +71,7 @@ export function GroupList({
 							<Button
 								variant="outline"
 								size="lg"
-								className="h-12 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+								className="h-12 px-6 rounded-xl shadow-md"
 							>
 								<Users className="w-5 h-5 mr-2" />
 								Rejoindre un groupe
@@ -92,11 +86,8 @@ export function GroupList({
 	return (
 		<div className="space-y-4 sm:space-y-6">
 			{groups.map((group) => (
-				<div key={group?._id} className="group relative smooth-hover">
-					{/* Glow effect */}
-					<div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 rounded-3xl blur opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
-
-					<Card className="relative bg-card/50 backdrop-blur-sm border hover:bg-card/80 transition-all duration-300 hover:shadow-xl rounded-2xl sm:rounded-3xl">
+				<div key={group?._id} className="relative">
+					<Card className="relative backdrop-blur-sm border rounded-2xl sm:rounded-3xl shadow-md">
 						<CardHeader>
 							<div className="flex items-center space-x-3 sm:space-x-4">
 								<div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-r from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg">
