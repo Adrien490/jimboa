@@ -62,11 +62,7 @@ export default function RootLayout({
 					{/* One-time purge of any previously registered SW + caches */}
 					<ConvexClientProvider>
 						<div className="min-h-screen bg-background">
-							<main>
-								<div className="container max-w-2xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
-									{children}
-								</div>
-							</main>
+							<main>{children}</main>
 						</div>
 						<Toaster
 							position="top-center"
