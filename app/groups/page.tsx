@@ -44,12 +44,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 				}
 			/>
 
-			<PageContainer className="min-h-[100dvh] relative bg-gradient-to-br from-background via-background to-background/95 pt-20 sm:pt-24 pb-32 sm:pb-36 space-y-0 flex flex-col">
-				{/* Background Elements */}
-				<div className="absolute top-1/4 left-4 w-2 h-2 bg-primary rounded-full opacity-60" />
-				<div className="absolute top-1/3 right-8 w-1 h-1 bg-primary/70 rounded-full opacity-40" />
-				<div className="absolute bottom-1/4 right-4 w-1.5 h-1.5 bg-primary/60 rounded-full opacity-50" />
-
+			<PageContainer>
 				{/* Search Bar */}
 				<div className="mb-6 flex-shrink-0">
 					<div className="relative">
