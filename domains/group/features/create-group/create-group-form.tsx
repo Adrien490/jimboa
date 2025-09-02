@@ -108,52 +108,52 @@ export function CreateGroupForm() {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-8">
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+				<form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
 					{/* Type Selection */}
 					<FormField
 						control={form.control}
 						name="type"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="text-base font-medium">
+								<FormLabel className="text-lg font-heading-semibold text-foreground">
 									Type de groupe
 								</FormLabel>
 								<FormControl>
-									<div className="grid grid-cols-2 gap-3">
+									<div className="grid grid-cols-2 gap-3 sm:gap-4">
 										{/* Friends Option */}
 										<button
 											type="button"
 											onClick={() => field.onChange("friends")}
-											className={`relative group p-4 rounded-2xl border-2 transition-all duration-300 ${
+											className={`relative group p-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 touch-manipulation ${
 												selectedType === "friends"
-													? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-lg"
-													: "border-border bg-card/50 hover:border-blue-300 hover:bg-blue-50/50 dark:hover:bg-blue-950/20"
+													? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
+													: "border-border bg-card/50 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]"
 											}`}
 											disabled={isSubmitting}
 										>
-											<div className="flex flex-col items-center space-y-3">
+											<div className="flex flex-col items-center space-y-3 sm:space-y-4">
 												<div
-													className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+													className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
 														selectedType === "friends"
-															? "bg-blue-500 text-white shadow-lg"
-															: "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/70"
+															? "bg-primary text-primary-foreground shadow-xl"
+															: "bg-primary/10 text-primary group-hover:bg-primary/20"
 													}`}
 												>
-													<Users className="w-7 h-7" />
+													<Users className="w-7 h-7 sm:w-8 sm:h-8" />
 												</div>
 												<div className="text-center">
-													<h3 className="font-heading-semibold text-sm text-card-foreground">
+													<h3 className="font-heading-semibold text-sm sm:text-base text-card-foreground mb-1">
 														Entre amis
 													</h3>
-													<p className="text-xs text-muted-foreground">
+													<p className="text-sm text-muted-foreground">
 														Jusqu&apos;à 50 membres
 													</p>
 												</div>
 											</div>
 											{selectedType === "friends" && (
-												<div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400/20 to-blue-600/20 rounded-2xl blur-sm opacity-50" />
+												<div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/30 rounded-2xl blur-md opacity-50 -z-10" />
 											)}
 										</button>
 
@@ -161,34 +161,34 @@ export function CreateGroupForm() {
 										<button
 											type="button"
 											onClick={() => field.onChange("couple")}
-											className={`relative group p-4 rounded-2xl border-2 transition-all duration-300 ${
+											className={`relative group p-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 touch-manipulation ${
 												selectedType === "couple"
-													? "border-rose-500 bg-rose-50 dark:bg-rose-950/30 shadow-lg"
-													: "border-border bg-card/50 hover:border-rose-300 hover:bg-rose-50/50 dark:hover:bg-rose-950/20"
+													? "border-red-500 bg-red-50 dark:bg-red-950/30 shadow-lg scale-[1.02]"
+													: "border-border bg-card/50 hover:border-red-300 hover:bg-red-50/50 dark:hover:bg-red-950/20 active:scale-[0.98]"
 											}`}
 											disabled={isSubmitting}
 										>
-											<div className="flex flex-col items-center space-y-3">
+											<div className="flex flex-col items-center space-y-3 sm:space-y-4">
 												<div
-													className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+													className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${
 														selectedType === "couple"
-															? "bg-rose-500 text-white shadow-lg"
-															: "bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 group-hover:bg-rose-200 dark:group-hover:bg-rose-900/70"
+															? "bg-red-500 text-white shadow-xl"
+															: "bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 group-hover:bg-red-200 dark:group-hover:bg-red-900/70"
 													}`}
 												>
-													<Heart className="w-7 h-7" />
+													<Heart className="w-7 h-7 sm:w-8 sm:h-8" />
 												</div>
 												<div className="text-center">
-													<h3 className="font-heading-semibold text-sm text-card-foreground">
+													<h3 className="font-heading-semibold text-sm sm:text-base text-card-foreground mb-1">
 														En couple
 													</h3>
-													<p className="text-xs text-muted-foreground">
+													<p className="text-sm text-muted-foreground">
 														Maximum 2 membres
 													</p>
 												</div>
 											</div>
 											{selectedType === "couple" && (
-												<div className="absolute -inset-0.5 bg-gradient-to-r from-rose-400/20 to-rose-600/20 rounded-2xl blur-sm opacity-50" />
+												<div className="absolute -inset-1 bg-gradient-to-r from-red-400/20 to-red-600/20 rounded-2xl blur-md opacity-50 -z-10" />
 											)}
 										</button>
 									</div>
@@ -197,18 +197,19 @@ export function CreateGroupForm() {
 							</FormItem>
 						)}
 					/>
+
 					{/* Image Upload */}
-					<div className="space-y-2">
-						<FormLabel className="text-base font-medium">
-							Photo du groupe (optionnel)
+					<FormItem>
+						<FormLabel className="text-lg font-heading-semibold text-foreground">
+							Photo du groupe
 						</FormLabel>
-						<div className="flex items-center gap-4">
-							<div className="relative">
+						<div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+							<div className="relative flex-shrink-0">
 								{selectedImage ? (
-									<div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-border">
+									<div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-border shadow-lg">
 										<Image
-											width={96}
-											height={96}
+											width={112}
+											height={112}
 											src={URL.createObjectURL(selectedImage)}
 											alt="Aperçu"
 											className="w-full h-full object-cover"
@@ -216,29 +217,33 @@ export function CreateGroupForm() {
 										<button
 											type="button"
 											onClick={removeImage}
-											className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/90 transition-colors"
+											className="absolute -top-2 -right-2 w-7 h-7 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/90 transition-colors shadow-lg touch-manipulation"
 											disabled={isSubmitting}
 										>
-											<X className="w-3 h-3" />
+											<X className="w-4 h-4" />
 										</button>
 									</div>
 								) : (
 									<button
 										type="button"
 										onClick={() => fileInputRef.current?.click()}
-										className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed border-muted-foreground/25 rounded-xl flex items-center justify-center hover:border-muted-foreground/50 transition-colors"
+										className="w-24 h-24 sm:w-28 sm:h-28 border-2 border-dashed border-muted-foreground/30 rounded-2xl flex items-center justify-center hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 touch-manipulation active:scale-95"
 										disabled={isSubmitting}
 									>
-										<Camera className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
+										<Camera className="w-10 h-10 text-muted-foreground" />
 									</button>
 								)}
 							</div>
-							<div className="flex-1">
+							<div className="flex-1 space-y-2">
+								<p className="text-base text-card-foreground font-medium">
+									Personnalisez votre groupe
+								</p>
 								<p className="text-sm text-muted-foreground">
-									Ajoutez une photo pour personnaliser votre groupe
+									Ajoutez une photo pour rendre votre groupe unique et
+									facilement reconnaissable
 								</p>
 								<p className="text-xs text-muted-foreground">
-									JPG, PNG ou GIF • Max 5MB
+									JPG, PNG ou GIF • Maximum 5MB
 								</p>
 							</div>
 						</div>
@@ -250,20 +255,21 @@ export function CreateGroupForm() {
 							className="hidden"
 							disabled={isSubmitting}
 						/>
-					</div>
+					</FormItem>
 
+					{/* Group Name */}
 					<FormField
 						control={form.control}
 						name="name"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="text-base font-medium">
+								<FormLabel className="text-lg font-heading-semibold text-foreground">
 									Nom du groupe
 								</FormLabel>
 								<FormControl>
 									<Input
 										placeholder="Ex: Mes amis, Équipe projet, Famille..."
-										className="text-base"
+										className="h-14 text-base rounded-2xl border-2 focus:border-primary transition-all duration-300"
 										disabled={isSubmitting}
 										maxLength={100}
 										{...field}
@@ -271,7 +277,7 @@ export function CreateGroupForm() {
 								</FormControl>
 								<FormMessage />
 								{field.value && (
-									<p className="text-xs text-muted-foreground">
+									<p className="text-sm text-muted-foreground text-right">
 										{field.value.length}/100 caractères
 									</p>
 								)}
@@ -279,40 +285,55 @@ export function CreateGroupForm() {
 						)}
 					/>
 
-					{/* Info sur ce qui sera généré */}
+					{/* Info Card */}
 					{selectedType && (
-						<div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-							<h4 className="text-sm font-medium text-foreground">
-								Ce qui sera généré automatiquement :
-							</h4>
-							<ul className="text-xs text-muted-foreground space-y-1">
-								<li>• Code d&apos;invitation unique (6 caractères)</li>
-								<li>• Vous serez automatiquement administrateur du groupe</li>
-								<li>• Heure de notification quotidienne : 9h00</li>
-								<li>
-									• Limite de membres :{" "}
-									{selectedType === "couple" ? "2 personnes" : "50 personnes"}
-								</li>
-								<li>• Date de création</li>
-							</ul>
+						<div className="relative">
+							<div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl blur-xl opacity-50" />
+							<div className="relative rounded-2xl border bg-card/50 backdrop-blur-sm p-6 space-y-3">
+								<h4 className="text-base font-heading-semibold text-foreground flex items-center gap-2">
+									<div className="w-2 h-2 bg-primary rounded-full" />
+									Configuration automatique
+								</h4>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+									<div className="flex items-center gap-2">
+										<div className="w-1 h-1 bg-primary/60 rounded-full" />
+										Code d&apos;invitation unique
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="w-1 h-1 bg-primary/60 rounded-full" />
+										Vous serez administrateur
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="w-1 h-1 bg-primary/60 rounded-full" />
+										Notifications à 9h00
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="w-1 h-1 bg-primary/60 rounded-full" />
+										{selectedType === "couple"
+											? "2 membres max"
+											: "50 membres max"}
+									</div>
+								</div>
+							</div>
 						</div>
 					)}
 
-					<div className="pt-4">
+					{/* Submit Button */}
+					<div className="pt-6">
 						<Button
 							type="submit"
 							size="lg"
-							className="w-full h-14 text-base font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+							className="w-full h-16 text-lg font-heading-semibold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] touch-manipulation"
 							disabled={isSubmitting || !isValid}
 						>
 							{isSubmitting ? (
 								<>
-									<Loader2 className="w-5 h-5 mr-3 animate-spin" />
+									<Loader2 className="w-6 h-6 mr-3 animate-spin" />
 									Création en cours...
 								</>
 							) : (
 								<>
-									<Plus className="w-5 h-5 mr-3" />
+									<Plus className="w-6 h-6 mr-3" />
 									Créer le groupe
 								</>
 							)}
