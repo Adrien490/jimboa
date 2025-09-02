@@ -11,5 +11,8 @@ export const createGroupSchema = z.object({
 			(name) => name.length > 0 && name.trim().length > 0,
 			"Le nom ne peut pas être vide"
 		),
+	type: z.enum(["friends", "couple"], {
+		message: "Veuillez sélectionner un type de groupe",
+	}),
 	image: z.instanceof(File).optional(),
 });

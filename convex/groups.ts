@@ -21,9 +21,10 @@ export const generateUploadUrl = mutation({
 export const create = mutation({
 	args: {
 		name: v.string(),
+		type: v.union(v.literal("friends"), v.literal("couple")),
 		imageId: v.optional(v.id("_storage")),
 	},
-	handler: async (ctx, { name, imageId }) => {
+	handler: async (ctx, { name, type, imageId }) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) throw new Error("Not authenticated");
 		const userId = identity.subject;
@@ -43,10 +44,11 @@ export const create = mutation({
 			name,
 			code,
 			ownerId: userId,
+			type,
 			imageId,
 			dailyHour: 9, // 9h par défaut
 			dailyMinute: 0, // 0 minute par défaut
-			maxMembers: 50, // 50 membres max par défaut
+			maxMembers: type === "couple" ? 2 : 50, // 2 pour couple, 50 pour amis par défaut
 			createdAt: Date.now(),
 		});
 
@@ -124,6 +126,7 @@ export const getMy = query({
 					name: g.name,
 					code: g.code,
 					ownerId: g.ownerId,
+					type: g.type || "friends", // Par défaut "friends" pour les anciens groupes
 					imageUrl,
 					dailyHour: g.dailyHour,
 					dailyMinute: g.dailyMinute,

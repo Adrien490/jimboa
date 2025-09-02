@@ -8,6 +8,7 @@ export default defineSchema({
 		name: v.string(),
 		code: v.string(), // unique logique (contrôle via index/mutation)
 		ownerId: v.string(), // Clerk userId (owner formel du groupe)
+		type: v.union(v.literal("friends"), v.literal("couple")), // Type de groupe
 		imageId: v.optional(v.id("_storage")),
 		dailyHour: v.number(), // 0..23
 		dailyMinute: v.number(), // 0..59
