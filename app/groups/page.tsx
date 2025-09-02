@@ -47,13 +47,13 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 			<PageContainer className="min-h-[100dvh] relative bg-gradient-to-br from-background via-background to-background/95 pt-20 sm:pt-24 pb-32 sm:pb-36 space-y-0 flex flex-col">
 				{/* Background Elements */}
 				<div className="absolute top-1/4 left-4 w-2 h-2 bg-primary rounded-full opacity-60" />
-				<div className="absolute top-1/3 right-8 w-1 h-1 bg-purple-500 rounded-full opacity-40" />
-				<div className="absolute bottom-1/4 right-4 w-1.5 h-1.5 bg-blue-500 rounded-full opacity-50" />
+				<div className="absolute top-1/3 right-8 w-1 h-1 bg-primary/70 rounded-full opacity-40" />
+				<div className="absolute bottom-1/4 right-4 w-1.5 h-1.5 bg-primary/60 rounded-full opacity-50" />
 
 				{/* Search Bar */}
 				<div className="mb-6 flex-shrink-0">
 					<div className="relative">
-						<div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl blur-xl opacity-50" />
+						<div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl blur-xl opacity-50" />
 						<div className="relative flex items-center space-x-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm">
 							<div className="flex-1">
 								<SearchForm
@@ -76,10 +76,10 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 			<Toolbar>
 				<Link href="/groups/join" className="flex-1">
 					<div className="group relative">
-						<div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
-						<div className="relative flex items-center justify-center space-x-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors">
-							<Users className="w-5 h-5 text-blue-500" />
-							<span className="font-body text-sm text-card-foreground">
+						<div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+						<div className="relative flex items-center justify-center space-x-2 p-3 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors">
+							<Users className="w-4 h-4 text-primary" />
+							<span className="font-body text-xs text-card-foreground">
 								Rejoindre
 							</span>
 						</div>
@@ -89,9 +89,9 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 				<Link href="/groups/new" className="flex-1">
 					<div className="group relative">
 						<div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur-sm opacity-50" />
-						<div className="relative flex items-center justify-center space-x-3 p-4 rounded-2xl bg-gradient-to-r from-primary to-primary/90 shadow-lg">
-							<Plus className="w-5 h-5 text-white" />
-							<span className="font-body text-sm font-medium text-white">
+						<div className="relative flex items-center justify-center space-x-2 p-3 rounded-2xl bg-gradient-to-r from-primary to-primary/90 shadow-lg">
+							<Plus className="w-4 h-4 text-white" />
+							<span className="font-body text-xs font-medium text-white">
 								Créer un groupe
 							</span>
 						</div>

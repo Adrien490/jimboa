@@ -23,10 +23,10 @@ export function GroupList({
 				<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 					{/* Visual Element */}
 					<div className="relative mb-8">
-						<div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-orange-500/20 to-red-500/20 flex items-center justify-center shadow-lg">
-							<Users className="w-8 h-8 text-orange-500" />
+						<div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-destructive/20 to-destructive/30 flex items-center justify-center shadow-lg">
+							<Users className="w-8 h-8 text-destructive" />
 						</div>
-						<div className="absolute -inset-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-full blur-lg opacity-50" />
+						<div className="absolute -inset-2 bg-gradient-to-r from-destructive/20 to-destructive/30 rounded-full blur-lg opacity-50" />
 					</div>
 
 					{/* Content */}
@@ -69,11 +69,11 @@ export function GroupList({
 				{/* Content */}
 				<div className="mb-8">
 					<h3 className="text-xl font-heading-bold text-foreground mb-2">
-						Aucun groupe pour l'instant
+						Aucun groupe pour l&apos;instant
 					</h3>
 					<p className="text-sm text-muted-foreground max-w-sm">
 						Créez votre premier groupe ou rejoignez-en un avec un code
-						d'invitation !
+						d&apos;invitation !
 					</p>
 				</div>
 
@@ -93,9 +93,9 @@ export function GroupList({
 
 					<Link href="/groups/join" className="block">
 						<div className="group relative">
-							<div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+							<div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/30 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
 							<div className="relative flex items-center justify-center space-x-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors">
-								<Users className="w-5 h-5 text-blue-500" />
+								<Users className="w-5 h-5 text-primary" />
 								<span className="font-body text-sm text-card-foreground">
 									Rejoindre un groupe
 								</span>
