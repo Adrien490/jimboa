@@ -86,8 +86,9 @@ export function GroupList({
 	return (
 		<div className="space-y-4 sm:space-y-6">
 			{groups.map((group) => (
-				<div key={group?._id} className="relative">
-					<Card className="relative backdrop-blur-sm border rounded-2xl sm:rounded-3xl shadow-md">
+				<Link key={group?._id} href={`/groups/${group?._id}`} className="block">
+					<div className="relative">
+						<Card className="relative backdrop-blur-sm border rounded-2xl sm:rounded-3xl shadow-md cursor-pointer transition-transform duration-200 active:scale-95">
 						<CardHeader>
 							<div className="flex items-center space-x-3 sm:space-x-4">
 								<div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-r from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg">
@@ -113,8 +114,9 @@ export function GroupList({
 								</div>
 							</div>
 						</CardHeader>
-					</Card>
-				</div>
+						</Card>
+					</div>
+				</Link>
 			))}
 		</div>
 	);
