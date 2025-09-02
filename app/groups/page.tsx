@@ -41,14 +41,6 @@ export default async function GroupsPage() {
 						</Link>
 					</div>
 
-					{/* Description */}
-					<p className="text-base sm:text-lg font-body text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
-						Gérez vos groupes et{" "}
-						<span className="text-primary font-medium">
-							invitez vos gars sûrs
-						</span>
-					</p>
-
 					{/* Groups List */}
 					<div className="flex-1">
 						<GroupList preloadedGroups={preloadedGroups} />
