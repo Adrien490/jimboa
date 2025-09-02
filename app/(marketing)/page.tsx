@@ -37,7 +37,7 @@ export default function Home() {
 					<div className="mb-8 sm:mb-12">
 						<div className="relative">
 							<h1 className="text-5xl sm:text-6xl lg:text-7xl font-heading-bold text-foreground mb-4 tracking-tight">
-								Jimboa
+								Jimbao
 							</h1>
 							<div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-full blur-xl opacity-50 animate-pulse" />
 						</div>
