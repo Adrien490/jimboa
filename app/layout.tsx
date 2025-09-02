@@ -50,7 +50,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<ClerkProvider>
+		<ClerkProvider
+			signInFallbackRedirectUrl="/groups"
+			signUpFallbackRedirectUrl="/groups"
+		>
 			<html lang="fr" className="dark" data-theme="dark">
 				<body
 					className={`${satoshi.variable} ${inter.variable} antialiased font-body`}

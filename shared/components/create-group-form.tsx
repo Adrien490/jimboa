@@ -127,7 +127,7 @@ export function CreateGroupForm() {
 						<div className="flex items-center gap-4">
 							<div className="relative">
 								{selectedImage ? (
-									<div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+									<div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-border">
 										<Image
 											width={80}
 											height={80}
@@ -148,10 +148,10 @@ export function CreateGroupForm() {
 									<button
 										type="button"
 										onClick={() => fileInputRef.current?.click()}
-										className="w-20 h-20 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center hover:border-muted-foreground/50 transition-colors"
+										className="w-16 h-16 sm:w-20 sm:h-20 border-2 border-dashed border-muted-foreground/25 rounded-xl flex items-center justify-center hover:border-muted-foreground/50 transition-colors"
 										disabled={isSubmitting}
 									>
-										<Camera className="w-6 h-6 text-muted-foreground" />
+										<Camera className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
 									</button>
 								)}
 							</div>

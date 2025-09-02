@@ -59,8 +59,7 @@ export function LoginForm() {
 			if (!isLoaded) return;
 			await signIn.authenticateWithRedirect({
 				strategy: provider,
-				redirectUrl: "/",
-				redirectUrlComplete: "/",
+				fallbackRedirectUrl: "/groups",
 			});
 		} catch (err) {
 			console.warn("OAuth error", err);

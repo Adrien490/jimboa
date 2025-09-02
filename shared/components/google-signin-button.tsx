@@ -8,11 +8,10 @@ export function GoogleSignInButton() {
 
 	const handleGoogle = async () => {
 		if (!isLoaded) return;
-		const dest = process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL || "/groups";
 		await signIn?.authenticateWithRedirect({
 			strategy: "oauth_google",
-			redirectUrl: dest,
-			redirectUrlComplete: dest,
+			redirectUrl: "/groups",
+			redirectUrlComplete: "/groups",
 		});
 	};
 
