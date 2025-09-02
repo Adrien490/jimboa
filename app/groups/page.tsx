@@ -11,12 +11,23 @@ import { Plus, User, Users } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-export default async function GroupsPage() {
+interface GroupsPageProps {
+	searchParams: Promise<{ search?: string }>;
+}
+
+export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 	const session = await auth();
 	if (!session.userId) redirect("/");
 
+	const resolvedSearchParams = await searchParams;
+	const search = resolvedSearchParams?.search;
+
 	const token = (await session.getToken({ template: "convex" })) ?? undefined;
-	const preloadedGroups = await preloadQuery(api.groups.getMy, {}, { token });
+	const preloadedGroups = await preloadQuery(
+		api.groups.getMy,
+		{ search },
+		{ token }
+	);
 
 	return (
 		<>

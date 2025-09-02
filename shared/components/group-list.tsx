@@ -2,6 +2,7 @@
 
 import { api } from "@/convex/_generated/api";
 import { EmptyState } from "@/shared/components/empty-state";
+import { Button } from "@/shared/components/ui/button";
 import {
 	Card,
 	CardDescription,
@@ -9,8 +10,10 @@ import {
 	CardTitle,
 } from "@/shared/components/ui/card";
 import { Preloaded, usePreloadedQuery } from "convex/react";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export function GroupList({
 	preloadedGroups,
@@ -18,13 +21,70 @@ export function GroupList({
 	preloadedGroups: Preloaded<typeof api.groups.getMy>;
 }) {
 	const groups = usePreloadedQuery(preloadedGroups);
+	const searchParams = useSearchParams();
+	const hasSearch = searchParams.get("search");
 
 	if (!groups?.length) {
+		// État différent selon s'il y a une recherche ou non
+		if (hasSearch) {
+			return (
+				<EmptyState
+					title="Aucun groupe trouvé"
+					description={
+						<>
+							Aucun groupe ne correspond à votre recherche.
+							<br />
+							Essayez un autre terme ou créez un nouveau groupe !
+						</>
+					}
+					action={
+						<Link href="/groups/new">
+							<Button
+								size="lg"
+								className="h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+							>
+								<Plus className="w-5 h-5 mr-2" />
+								Créer un groupe
+							</Button>
+						</Link>
+					}
+				/>
+			);
+		}
+
 		return (
 			<EmptyState
-				icon={Users}
 				title="Aucun groupe pour l'instant"
-				description={<>Créez votre premier groupe pour commencer :)</>}
+				description={
+					<>
+						Créez votre premier groupe !
+						<br />
+						C&apos;est parti !
+					</>
+				}
+				action={
+					<div className="flex flex-col sm:flex-row gap-3 justify-center">
+						<Link href="/groups/new">
+							<Button
+								size="lg"
+								className="h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+							>
+								<Plus className="w-5 h-5 mr-2" />
+								Créer un groupe
+							</Button>
+						</Link>
+						<Link href="/groups/join">
+							<Button
+								variant="outline"
+								size="lg"
+								className="h-12 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+							>
+								<Users className="w-5 h-5 mr-2" />
+								Rejoindre un groupe
+							</Button>
+						</Link>
+					</div>
+				}
 			/>
 		);
 	}

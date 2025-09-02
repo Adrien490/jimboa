@@ -98,8 +98,10 @@ export const joinWithCode = mutation({
 });
 
 export const getMy = query({
-	args: {},
-	handler: async (ctx) => {
+	args: {
+		search: v.optional(v.string()),
+	},
+	handler: async (ctx, { search }) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) return [];
 		const userId = identity.subject;
@@ -130,7 +132,14 @@ export const getMy = query({
 				};
 			})
 		);
-		return groups.filter(Boolean);
+
+		// Filter groups based on search term
+		const filteredGroups = groups.filter(Boolean);
+		if (!search) return filteredGroups;
+
+		return filteredGroups.filter((group) =>
+			group?.name.toLowerCase().includes(search.toLowerCase())
+		);
 	},
 });
 
