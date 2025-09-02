@@ -20,7 +20,7 @@ export function Toolbar({ children, className }: ToolbarProps) {
 					"bg-card/40 backdrop-blur-md border border-border/30",
 					"rounded-2xl shadow-2xl",
 					// Padding et hauteur optimisés
-					"py-3 h-14",
+					"pb-3 h-14",
 					// Flexbox pour le contenu avec gap
 					"flex items-center gap-3",
 					// Effets de glow subtils
