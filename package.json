@@ -6,7 +6,8 @@
 		"dev": "NEXT_DISABLE_TURBOPACK=1 next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "eslint"
+		"lint": "eslint",
+		"check-fonts": "node scripts/check-fonts.js"
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^6.31.6",

@@ -1,114 +1,108 @@
 import { GoogleSignInButton } from "@/shared/components/google-signin-button";
 import { PageContainer } from "@/shared/components/page-container";
 import { Particles } from "@/shared/components/particles";
+import { ArrowRight, Shield, Users, Zap } from "lucide-react";
+
+const features = [
+	{
+		icon: Users,
+		title: "Groupes privés",
+		description: "Invite tes gars sûrs",
+		color: "from-blue-500 to-cyan-500",
+	},
+	{
+		icon: Shield,
+		title: "Code d'invitation",
+		description: "Ne le partage pas à ta daronne",
+		color: "from-purple-500 to-pink-500",
+	},
+	{
+		icon: Zap,
+		title: "Connexion rapide",
+		description: "Ultra précoce, même",
+		color: "from-orange-500 to-red-500",
+	},
+];
 
 export default function Home() {
 	return (
-		<PageContainer className="min-h-[calc(100vh-6rem)] flex items-center justify-center relative">
+		<PageContainer className="min-h-[100dvh] relative overflow-hidden">
 			<Particles />
-			<div className="w-full max-w-md space-y-8 relative z-10">
+
+			{/* Hero Section */}
+			<div className="relative z-10 flex flex-col min-h-[100dvh]">
 				{/* Header */}
-				<div className="text-center space-y-2">
-					<h1 className="text-3xl font-heading font-bold text-foreground">
-						Jimboa
-					</h1>
-					<p className="text-muted-foreground">
-						Bon, tu vas trainer ici longtemps ? Connecte-toi, bordel !
-					</p>
-				</div>
-
-				{/* Features */}
-				<div className="space-y-4">
-					<div className="flex items-center space-x-3 p-4 rounded-lg border bg-card">
-						<div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-							<svg
-								className="w-4 h-4 text-primary"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-								/>
-							</svg>
+				<div className="flex-1 flex flex-col justify-center items-center text-center px-4 py-8 sm:py-12">
+					{/* Logo/Brand */}
+					<div className="mb-8 sm:mb-12">
+						<div className="relative">
+							<h1 className="text-5xl sm:text-6xl lg:text-7xl font-heading-bold text-foreground mb-4 tracking-tight">
+								Jimboa
+							</h1>
+							<div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-full blur-xl opacity-50 animate-pulse" />
 						</div>
-						<div>
-							<h3 className="font-medium text-card-foreground">
-								Groupes privés
-							</h3>
-							<p className="text-sm text-muted-foreground">
-								Invite tes gars sûrs
-							</p>
-						</div>
+						<p className="text-lg sm:text-xl font-body text-muted-foreground max-w-md mx-auto leading-relaxed">
+							Bon, tu vas traîner ici longtemps ?{" "}
+							<span className="text-primary font-medium">
+								Connecte-toi, bordel !
+							</span>
+						</p>
 					</div>
 
-					<div className="flex items-center space-x-3 p-4 rounded-lg border bg-card">
-						<div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-							<svg
-								className="w-4 h-4 text-primary"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-								/>
-							</svg>
-						</div>
-						<div>
-							<h3 className="font-medium text-card-foreground">
-								Code d&apos;invitation
-							</h3>
-							<p className="text-sm text-muted-foreground">
-								Ne le partage pas à ta daronne
-							</p>
-						</div>
+					{/* Features Grid */}
+					<div className="w-full max-w-sm sm:max-w-md space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+						{features.map((feature, index) => {
+							const Icon = feature.icon;
+							return (
+								<div key={index} className="group relative smooth-hover">
+									<div
+										className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-2xl blur-sm"
+										style={{
+											backgroundImage: `linear-gradient(to right, ${feature.color.split(" ")[1]}, ${feature.color.split(" ")[3]})`,
+										}}
+									/>
+
+									<div className="relative flex items-center space-x-4 p-4 sm:p-5 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300">
+										<div
+											className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center shadow-lg`}
+										>
+											<Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+										</div>
+										<div className="flex-1 text-left">
+											<h3 className="font-heading-semibold text-card-foreground text-base sm:text-lg mb-1">
+												{feature.title}
+											</h3>
+											<p className="text-sm sm:text-base font-body text-muted-foreground">
+												{feature.description}
+											</p>
+										</div>
+										<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+									</div>
+								</div>
+							);
+						})}
 					</div>
 
-					<div className="flex items-center space-x-3 p-4 rounded-lg border bg-card">
-						<div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-							<svg
-								className="w-4 h-4 text-primary"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M13 10V3L4 14h7v7l9-11h-7z"
-								/>
-							</svg>
-						</div>
-						<div>
-							<h3 className="font-medium text-card-foreground">
-								Connexion rapide
-							</h3>
-							<p className="text-sm text-muted-foreground">
-								Ultra précoce, même
-							</p>
-						</div>
+					{/* CTA Section */}
+					<div className="w-full max-w-sm sm:max-w-md space-y-4 sm:space-y-6">
+						<GoogleSignInButton />
+
+						<p className="text-xs sm:text-sm text-center text-muted-foreground px-4">
+							En continuant, vous acceptez nos{" "}
+							<span className="underline hover:text-foreground cursor-pointer transition-colors duration-200">
+								conditions d&apos;utilisation
+							</span>
+						</p>
 					</div>
 				</div>
 
-				{/* CTA */}
-				<div className="space-y-4">
-					<GoogleSignInButton />
-					<p className="text-xs text-center text-muted-foreground">
-						En continuant, vous acceptez nos{" "}
-						<span className="underline hover:text-foreground cursor-pointer">
-							conditions d&apos;utilisation
-						</span>
-					</p>
-				</div>
+				{/* Bottom Safe Area Spacer for Mobile */}
+				<div className="h-safe-bottom sm:h-0" />
 			</div>
+
+			{/* Floating Elements for Visual Interest - Using CSS animations instead */}
+			<div className="absolute top-1/4 left-4 w-2 h-2 bg-primary rounded-full opacity-60 animate-bounce" />
+			<div className="absolute top-1/3 right-8 w-1 h-1 bg-purple-500 rounded-full opacity-40 animate-pulse" />
 		</PageContainer>
 	);
 }

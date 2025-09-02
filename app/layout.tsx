@@ -1,19 +1,32 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
-import { Inter, Syne } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { ConvexClientProvider } from "../shared/providers/convex-client-provider";
 import "./globals.css";
 
-const syne = Syne({
-	variable: "--font-syne",
-	subsets: ["latin"],
+// Satoshi - Titres uniquement (Medium comme SemiBold + Bold)
+const satoshi = localFont({
+	src: [
+		{
+			path: "./fonts/Satoshi-Bold.woff2",
+			weight: "700",
+			style: "normal",
+		},
+	],
+	variable: "--font-satoshi",
 	display: "swap",
+	preload: true,
+	fallback: ["system-ui", "-apple-system", "sans-serif"],
 });
 
+// Inter - Corps de texte (Regular & Medium)
 const inter = Inter({
 	variable: "--font-inter",
 	subsets: ["latin"],
 	display: "swap",
+	weight: ["400", "500"], // Regular & Medium pour le texte
+	preload: true,
 });
 
 export const metadata: Metadata = {
@@ -40,7 +53,7 @@ export default function RootLayout({
 		<ClerkProvider>
 			<html lang="fr" className="dark" data-theme="dark">
 				<body
-					className={`${syne.variable} ${inter.variable} antialiased font-body`}
+					className={`${satoshi.variable} ${inter.variable} antialiased font-body`}
 				>
 					{/* One-time purge of any previously registered SW + caches */}
 					<ConvexClientProvider>
