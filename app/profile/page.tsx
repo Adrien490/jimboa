@@ -15,7 +15,7 @@ export default async function ProfilePage() {
 	const user = await currentUser();
 
 	return (
-		<PageContainer withContainer>
+		<PageContainer>
 			<PageHeader
 				title="Profil"
 				description="Gérez votre compte et vos paramètres"

@@ -1,7 +1,8 @@
 import { GoogleSignInButton } from "@/shared/components/google-signin-button";
 import { PageContainer } from "@/shared/components/page-container";
 import { Particles } from "@/shared/components/particles";
-import { ArrowRight, Shield, Users, Zap } from "lucide-react";
+import { ArrowRight, HelpCircle, Shield, Users, Zap } from "lucide-react";
+import Link from "next/link";
 
 const features = [
 	{
@@ -26,11 +27,11 @@ const features = [
 
 export default function Home() {
 	return (
-		<PageContainer className="min-h-[100dvh] relative overflow-hidden">
+		<PageContainer className="h-[100dvh] relative overflow-hidden">
 			<Particles />
 
 			{/* Hero Section */}
-			<div className="relative z-10 flex flex-col min-h-[100dvh]">
+			<div className="relative z-10 flex flex-col h-full">
 				{/* Header */}
 				<div className="flex-1 flex flex-col justify-center items-center text-center px-4 py-8 sm:py-12">
 					{/* Logo/Brand */}
@@ -86,6 +87,17 @@ export default function Home() {
 					{/* CTA Section */}
 					<div className="w-full max-w-md space-y-4 sm:space-y-6">
 						<GoogleSignInButton />
+
+						{/* FAQ Button */}
+						<div className="flex justify-center">
+							<Link
+								href="/faq"
+								className="inline-flex items-center space-x-2 px-4 py-2 text-sm font-body text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-card/50 backdrop-blur-sm"
+							>
+								<HelpCircle className="w-4 h-4" />
+								<span>Des questions ? Consulte la FAQ</span>
+							</Link>
+						</div>
 
 						<p className="text-xs sm:text-sm text-center text-muted-foreground px-4">
 							En continuant, vous acceptez nos{" "}

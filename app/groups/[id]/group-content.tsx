@@ -28,7 +28,7 @@ export function GroupContent({ preloadedGroup }: GroupContentProps) {
 					title="Groupe introuvable"
 					description="Ce groupe n'existe pas ou vous n'y avez pas accès"
 				/>
-				<PageContainer withContainer className="pt-20 sm:pt-24 pb-8">
+				<PageContainer className="pt-20 sm:pt-24 pb-8">
 					<Card>
 						<CardContent className="pt-6">
 							<p className="text-muted-foreground text-center">
@@ -49,7 +49,7 @@ export function GroupContent({ preloadedGroup }: GroupContentProps) {
 				description="Détails du groupe"
 			/>
 
-			<PageContainer withContainer className="pt-20 sm:pt-24 pb-8">
+			<PageContainer className="pt-20 sm:pt-24 pb-8">
 				<Card>
 					<CardHeader>
 						<div className="flex items-center space-x-4">

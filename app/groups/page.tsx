@@ -45,10 +45,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 				}
 			/>
 
-			<PageContainer
-				withContainer
-				className="min-h-[100dvh] relative overflow-hidden pt-20 sm:pt-24 pb-24 sm:pb-28"
-			>
+			<PageContainer className="min-h-[100dvh] relative overflow-hidden pt-20 sm:pt-24 pb-24 sm:pb-28">
 				{/* Main Content */}
 				<div className="relative z-10 flex flex-col min-h-[calc(100dvh-11rem)] sm:min-h-[calc(100dvh-13rem)]">
 					{/* Groups List */}
