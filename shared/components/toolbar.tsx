@@ -10,23 +10,23 @@ export function Toolbar({ children, className }: ToolbarProps) {
 	return (
 		<div className="fixed bottom-0 left-0 right-0 z-50 p-4 pb-safe">
 			{/* Glow effect background */}
-			<div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
+			<div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/40 to-transparent pointer-events-none" />
 
 			<div
 				className={cn(
 					// Container principal avec design moderne
 					"relative mx-auto max-w-sm",
 					// Style de la toolbar avec effets visuels
-					"bg-card/80 backdrop-blur-xl border border-border/50",
+					"bg-card/40 backdrop-blur-md border border-border/30",
 					"rounded-2xl shadow-2xl",
 					// Padding et hauteur optimisés
-					"px-3 py-3 h-14",
+					"py-3 h-14",
 					// Flexbox pour le contenu avec gap
 					"flex items-center gap-3",
 					// Effets de glow subtils
 					"before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/5 before:via-purple-500/5 before:to-pink-500/5 before:rounded-2xl before:blur-xl before:opacity-50",
 					// Interactions et transitions
-					"hover:shadow-3xl hover:border-border/70",
+					"hover:bg-card/60 hover:shadow-3xl hover:border-border/50",
 					"transition-all duration-300 ease-out",
 					// Safe area pour mobile
 					"mb-safe",
