@@ -60,7 +60,7 @@ export default async function GroupsPage() {
 				/>
 
 				<Link href="/groups/new">
-					<Button className="h-12 px-3 rounded-xl bg-primary/40 backdrop-blur-md border border-primary/30 text-primary-foreground font-heading-semibold text-sm shadow-lg hover:bg-primary/60 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap">
+					<Button className="h-12 px-3 rounded-xl bg-primary backdrop-blur-md border-2 border-primary/50 text-white font-heading-semibold text-sm shadow-xl hover:bg-primary/80 hover:border-primary/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap">
 						<Plus className="w-4 h-4 mr-1" />
 						Créer
 					</Button>

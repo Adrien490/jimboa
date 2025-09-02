@@ -81,7 +81,7 @@ export function SearchForm({
 						autoComplete="off"
 						type="search"
 						className={cn(
-							"pl-12 pr-12 h-12 sm:h-14 rounded-2xl",
+							"pl-12 pr-4 h-12 sm:h-14 rounded-2xl",
 							"bg-card/50 backdrop-blur-sm border-border/50",
 							"hover:bg-card/80 focus:bg-card/80",
 							"transition-all duration-300",
