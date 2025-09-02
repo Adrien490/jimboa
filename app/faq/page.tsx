@@ -7,8 +7,6 @@ import {
 	AccordionTrigger,
 } from "@/shared/components/ui/accordion";
 import { faqData } from "@/shared/constants/faq-data";
-import { Home } from "lucide-react";
-import Link from "next/link";
 
 export default function FAQPage() {
 	return (
@@ -17,15 +15,6 @@ export default function FAQPage() {
 				title="FAQ"
 				description="Toutes les réponses à tes questions"
 				showBackButton={true}
-				action={
-					<Link
-						href="/"
-						className="flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border hover:bg-card/80"
-						title="Retour à l'accueil"
-					>
-						<Home className="w-4 h-4 text-muted-foreground" />
-					</Link>
-				}
 			/>
 
 			<PageContainer className="pt-20 pb-6">
