@@ -1,8 +1,9 @@
 "use client";
 
 import { api } from "@/convex/_generated/api";
+import { Badge } from "@/shared/components/ui/badge";
 import { Preloaded, usePreloadedQuery } from "convex/react";
-import { Plus, Users } from "lucide-react";
+import { Heart, Plus, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -116,11 +117,30 @@ export function GroupList({
 					className="block group"
 				>
 					<div className="relative">
-						{/* Glow effect background */}
-						<div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+						{/* Glow effect background - couleur selon le type */}
+						<div
+							className={`absolute inset-0 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity ${
+								group?.type === "couple"
+									? "bg-gradient-to-r from-red-400/10 to-red-600/10"
+									: "bg-gradient-to-r from-primary/10 to-primary/20"
+							}`}
+						/>
 
-						<div className="relative flex items-center space-x-4 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors cursor-pointer">
-							<div className="w-14 h-14 rounded-xl bg-gradient-to-r from-primary/20 to-purple-500/20 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg">
+						<div
+							className={`relative flex items-center space-x-4 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors cursor-pointer ${
+								group?.type === "couple"
+									? "hover:bg-red-50/50 dark:hover:bg-red-950/20"
+									: ""
+							}`}
+						>
+							{/* Avatar avec couleurs spécifiques au type */}
+							<div
+								className={`w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg ${
+									group?.type === "couple"
+										? "bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/50 dark:to-red-800/50"
+										: "bg-gradient-to-r from-primary/20 to-primary/30"
+								}`}
+							>
 								{group?.imageUrl ? (
 									<Image
 										src={group.imageUrl}
@@ -130,18 +150,46 @@ export function GroupList({
 										className="w-full h-full object-cover rounded-xl"
 									/>
 								) : (
-									<Users className="w-7 h-7 text-primary" />
+									<>
+										{group?.type === "couple" ? (
+											<Heart className="w-7 h-7 text-red-600 dark:text-red-400" />
+										) : (
+											<Users className="w-7 h-7 text-primary" />
+										)}
+									</>
 								)}
 							</div>
+
 							<div className="flex-1 min-w-0">
-								<h3 className="text-base font-heading-semibold text-card-foreground truncate mb-1">
-									{group?.name}
-								</h3>
+								<div className="flex items-center gap-2 mb-1">
+									<h3 className="text-base font-heading-semibold text-card-foreground truncate">
+										{group?.name}
+									</h3>
+									{/* Badge du type de groupe */}
+									<Badge
+										variant={
+											group?.type === "couple" ? "destructive" : "default"
+										}
+										className={
+											group?.type === "couple"
+												? "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+												: ""
+										}
+									>
+										{group?.type === "couple" ? "Couple" : "Amis"}
+									</Badge>
+								</div>
 								<p className="text-xs font-mono font-medium text-muted-foreground">
 									Code : {group?.code}
 								</p>
 							</div>
-							<div className="w-2 h-2 bg-primary rounded-full opacity-60" />
+
+							{/* Indicateur coloré selon le type */}
+							<div
+								className={`w-2 h-2 rounded-full opacity-60 ${
+									group?.type === "couple" ? "bg-red-500" : "bg-primary"
+								}`}
+							/>
 						</div>
 					</div>
 				</Link>

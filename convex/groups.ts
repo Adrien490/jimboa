@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 function randomCode(len = 6) {
@@ -52,11 +53,11 @@ export const create = mutation({
 			createdAt: Date.now(),
 		});
 
-		// Add owner as a member with admin role
+		// Add owner as a member with owner role
 		await ctx.db.insert("memberships", {
 			groupId,
 			userId,
-			role: "admin",
+			role: "owner",
 			status: "active",
 			createdAt: Date.now(),
 		});
@@ -116,7 +117,7 @@ export const getMy = query({
 		const groups = await Promise.all(
 			myMemberships.map(async (m) => {
 				const g = await ctx.db.get(m.groupId);
-				if (!g) return null;
+				if (!g || g.deletedAt) return null; // Exclure les groupes supprimés
 
 				// Generate image URL if imageId exists
 				const imageUrl = g.imageId ? await ctx.storage.getUrl(g.imageId) : null;
@@ -152,7 +153,7 @@ export const get = query({
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) return null;
 		const group = await ctx.db.get(id);
-		if (!group) return null;
+		if (!group || group.deletedAt) return null; // Exclure les groupes supprimés
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
@@ -169,6 +170,11 @@ export const members = query({
 	handler: async (ctx, { groupId }) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) return [];
+
+		// Vérifier que le groupe existe et n'est pas supprimé
+		const group = await ctx.db.get(groupId);
+		if (!group || group.deletedAt) return [];
+
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
@@ -218,6 +224,31 @@ export const rename = mutation({
 	},
 });
 
+export const update = mutation({
+	args: {
+		id: v.id("groups"),
+		name: v.string(),
+		imageId: v.optional(v.id("_storage")),
+	},
+	handler: async (ctx, { id, name, imageId }) => {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) throw new Error("Not authenticated");
+
+		const group = await ctx.db.get(id);
+		if (!group) throw new Error("Group not found");
+		if (group.ownerId !== identity.subject) throw new Error("Not authorized");
+
+		// Prepare update data
+		const updateData: { name: string; imageId?: Id<"_storage"> } = { name };
+		if (imageId !== undefined) {
+			updateData.imageId = imageId;
+		}
+
+		await ctx.db.patch(id, updateData);
+		return { id };
+	},
+});
+
 export const regenerateCode = mutation({
 	args: { id: v.id("groups") },
 	handler: async (ctx, { id }) => {
@@ -256,6 +287,47 @@ const _delete = mutation({
 			await ctx.db.delete(m._id);
 		}
 		await ctx.db.delete(id);
+		return { id };
+	},
+});
+
+export const softDelete = mutation({
+	args: { id: v.id("groups") },
+	handler: async (ctx, { id }) => {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) throw new Error("Not authenticated");
+		const group = await ctx.db.get(id);
+		if (!group) throw new Error("Group not found");
+		if (group.ownerId !== identity.subject) throw new Error("Not authorized");
+
+		// Marquer le groupe comme supprimé avec deletedAt
+		await ctx.db.patch(id, { deletedAt: Date.now() });
+
+		return { id };
+	},
+});
+
+export const hardDelete = mutation({
+	args: { id: v.id("groups") },
+	handler: async (ctx, { id }) => {
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) throw new Error("Not authenticated");
+		const group = await ctx.db.get(id);
+		if (!group) throw new Error("Group not found");
+		if (group.ownerId !== identity.subject) throw new Error("Not authorized");
+
+		// Supprimer définitivement toutes les memberships
+		const ms = await ctx.db
+			.query("memberships")
+			.withIndex("by_group", (q) => q.eq("groupId", id))
+			.collect();
+		for (const m of ms) {
+			await ctx.db.delete(m._id);
+		}
+
+		// Supprimer définitivement le groupe
+		await ctx.db.delete(id);
+
 		return { id };
 	},
 });

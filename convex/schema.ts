@@ -14,6 +14,7 @@ export default defineSchema({
 		dailyMinute: v.number(), // 0..59
 		maxMembers: v.number(),
 		createdAt: v.number(),
+		deletedAt: v.optional(v.number()),
 	})
 		.index("by_code", ["code"])
 		.index("by_owner", ["ownerId"])
@@ -23,7 +24,7 @@ export default defineSchema({
 	memberships: defineTable({
 		groupId: v.id("groups"),
 		userId: v.string(), // Clerk userId
-		role: v.union(v.literal("admin"), v.literal("member")),
+		role: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
 		status: v.optional(
 			v.union(v.literal("active"), v.literal("left"), v.literal("banned"))
 		),

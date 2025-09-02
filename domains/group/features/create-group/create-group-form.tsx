@@ -102,8 +102,6 @@ export function CreateGroupForm() {
 				description: errorMessage,
 				duration: 4000,
 			});
-
-			console.error("Erreur création groupe:", error);
 		}
 	};
 
@@ -269,7 +267,6 @@ export function CreateGroupForm() {
 								<FormControl>
 									<Input
 										placeholder="Ex: Mes amis, Équipe projet, Famille..."
-										className="h-14 text-base rounded-2xl border-2 focus:border-primary transition-all duration-300"
 										disabled={isSubmitting}
 										maxLength={100}
 										{...field}
