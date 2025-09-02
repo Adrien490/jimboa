@@ -22,7 +22,7 @@ export function Toolbar({ children, className }: ToolbarProps) {
 					// Padding et hauteur optimisés pour PWA
 					"h-12",
 					// Flexbox pour le contenu avec gap réduit pour PWA
-					"flex items-center gap-2 px-3",
+					"flex items-center gap-2",
 					// Effets de glow subtils
 					"before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/5 before:via-purple-500/5 before:to-pink-500/5 before:rounded-2xl before:blur-xl before:opacity-50",
 					// Interactions et transitions

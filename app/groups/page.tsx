@@ -26,11 +26,10 @@ export default async function GroupsPage() {
 				action={
 					<Link
 						href="/profile"
-						className="relative group p-3 rounded-xl bg-card/50 backdrop-blur-sm border hover:bg-card/80 transition-all duration-300 hover:shadow-lg"
+						className="flex items-center justify-center w-10 h-10 rounded-xl bg-card/60 backdrop-blur-md border border-border/50 hover:bg-card/80 hover:border-border/70 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 group"
 						title="Voir le profil"
 					>
-						<div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-						<User className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors relative z-10" />
+						<User className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors duration-300" />
 					</Link>
 				}
 			/>
