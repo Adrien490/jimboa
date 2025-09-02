@@ -4,7 +4,6 @@ import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
 import { SearchForm } from "@/shared/components/search-form/search-form";
 import { Toolbar } from "@/shared/components/toolbar";
-import { Button } from "@/shared/components/ui/button";
 import { auth } from "@clerk/nextjs/server";
 import { preloadQuery } from "convex/nextjs";
 import { Plus, User, Users } from "lucide-react";
@@ -45,46 +44,58 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 				}
 			/>
 
-			<PageContainer className="min-h-[100dvh] relative overflow-hidden pt-20 sm:pt-24 pb-24 sm:pb-28">
-				{/* Main Content */}
-				<div className="relative z-10 flex flex-col min-h-[calc(100dvh-11rem)] sm:min-h-[calc(100dvh-13rem)]">
-					{/* Groups List */}
-					<div className="flex-1">
-						<GroupList preloadedGroups={preloadedGroups} />
-					</div>
+			<PageContainer className="min-h-[100dvh] relative bg-gradient-to-br from-background via-background to-background/95 pt-20 sm:pt-24 pb-32 sm:pb-36 space-y-0 flex flex-col">
+				{/* Background Elements */}
+				<div className="absolute top-1/4 left-4 w-2 h-2 bg-primary rounded-full opacity-60" />
+				<div className="absolute top-1/3 right-8 w-1 h-1 bg-purple-500 rounded-full opacity-40" />
+				<div className="absolute bottom-1/4 right-4 w-1.5 h-1.5 bg-blue-500 rounded-full opacity-50" />
 
-					{/* Bottom Safe Area Spacer for Mobile */}
-					<div className="h-safe-bottom sm:h-0" />
+				{/* Search Bar */}
+				<div className="mb-6 flex-shrink-0">
+					<div className="relative">
+						<div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl blur-xl opacity-50" />
+						<div className="relative flex items-center space-x-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm">
+							<div className="flex-1">
+								<SearchForm
+									paramName="search"
+									placeholder="Rechercher vos groupes..."
+									className="border-0 bg-transparent p-0 focus:ring-0 text-sm"
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Groups Content */}
+				<div className="flex-1 min-h-0">
+					<GroupList preloadedGroups={preloadedGroups} />
 				</div>
 			</PageContainer>
 
-			{/* Toolbar with Search and Action Buttons */}
+			{/* Toolbar with Action Buttons */}
 			<Toolbar>
-				<SearchForm
-					paramName="search"
-					placeholder="Rechercher..."
-					className="flex-1 min-w-0"
-				/>
-
-				<Link href="/groups/join">
-					<Button
-						size="sm"
-						variant="outline"
-						className="h-10 w-10 p-0 rounded-xl bg-card/60 backdrop-blur-md border-2 border-border/50 text-foreground shadow-xl hover:bg-card/80 hover:border-border/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 shrink-0"
-						title="Rejoindre un groupe"
-					>
-						<Users className="w-4 h-4" />
-					</Button>
+				<Link href="/groups/join" className="flex-1">
+					<div className="group relative">
+						<div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+						<div className="relative flex items-center justify-center space-x-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-colors">
+							<Users className="w-5 h-5 text-blue-500" />
+							<span className="font-body text-sm text-card-foreground">
+								Rejoindre
+							</span>
+						</div>
+					</div>
 				</Link>
 
-				<Link href="/groups/new">
-					<Button
-						size="sm"
-						className="h-10 w-10 p-0 rounded-xl bg-primary backdrop-blur-md border-2 border-primary/50 text-white shadow-xl hover:bg-primary/80 hover:border-primary/70 hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 shrink-0"
-						title="Créer un groupe"
-					>
-						<Plus className="w-4 h-4" />
-					</Button>
+				<Link href="/groups/new" className="flex-1">
+					<div className="group relative">
+						<div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur-sm opacity-50" />
+						<div className="relative flex items-center justify-center space-x-3 p-4 rounded-2xl bg-gradient-to-r from-primary to-primary/90 shadow-lg">
+							<Plus className="w-5 h-5 text-white" />
+							<span className="font-body text-sm font-medium text-white">
+								Créer un groupe
+							</span>
+						</div>
+					</div>
 				</Link>
 			</Toolbar>
 		</>
