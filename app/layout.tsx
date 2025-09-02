@@ -61,7 +61,7 @@ export default function RootLayout({
 				>
 					{/* One-time purge of any previously registered SW + caches */}
 					<ConvexClientProvider>
-						<div className="min-h-screen bg-background">
+						<div className="bg-background">
 							<main>{children}</main>
 						</div>
 						<Toaster

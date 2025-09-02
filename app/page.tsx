@@ -1,5 +1,4 @@
 import { GoogleSignInButton } from "@/shared/components/google-signin-button";
-import { PageContainer } from "@/shared/components/page-container";
 import { Particles } from "@/shared/components/particles";
 import { ArrowRight, HelpCircle, Shield, Users, Zap } from "lucide-react";
 import Link from "next/link";
@@ -27,13 +26,13 @@ const features = [
 
 export default function Home() {
 	return (
-		<PageContainer className="h-[100dvh] relative overflow-hidden">
+		<div className="h-[100dvh] relative overflow-hidden">
 			<Particles />
 
 			{/* Hero Section */}
-			<div className="relative z-10 flex flex-col h-full">
+			<div className="relative z-10 flex flex-col h-full max-w-md mx-auto px-4">
 				{/* Header */}
-				<div className="flex-1 flex flex-col justify-center items-center text-center px-4 py-8 sm:py-12">
+				<div className="flex-1 flex flex-col justify-center items-center text-center py-8 sm:py-12">
 					{/* Logo/Brand */}
 					<div className="mb-8 sm:mb-12">
 						<div className="relative">
@@ -115,6 +114,6 @@ export default function Home() {
 			{/* Floating Elements for Visual Interest - Using CSS animations instead */}
 			<div className="absolute top-1/4 left-4 w-2 h-2 bg-primary rounded-full opacity-60 animate-bounce" />
 			<div className="absolute top-1/3 right-8 w-1 h-1 bg-purple-500 rounded-full opacity-40 animate-pulse" />
-		</PageContainer>
+		</div>
 	);
 }
