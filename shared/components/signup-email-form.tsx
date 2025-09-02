@@ -36,7 +36,8 @@ export function SignupEmailForm() {
 			if (!inLoaded) return;
 			await signIn.authenticateWithRedirect({
 				strategy: provider,
-				fallbackRedirectUrl: "/groups",
+				redirectUrl: "/groups",
+				redirectUrlComplete: "/groups",
 			});
 		} catch {
 			// no-op: handled by Clerk
