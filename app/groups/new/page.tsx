@@ -9,13 +9,16 @@ export default async function NewGroupPage() {
 	if (!userId) redirect("/");
 
 	return (
-		<PageContainer>
+		<>
 			<PageHeader
 				showBackButton
 				title="Créer un groupe"
 				description="Donnez un nom à votre nouveau groupe"
 			/>
-			<CreateGroupForm />
-		</PageContainer>
+
+			<PageContainer className="pt-20 sm:pt-24 pb-8">
+				<CreateGroupForm />
+			</PageContainer>
+		</>
 	);
 }

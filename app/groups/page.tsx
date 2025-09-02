@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { GroupList } from "@/shared/components/group-list";
 import { PageContainer } from "@/shared/components/page-container";
+import { PageHeader } from "@/shared/components/page-header";
 import { SearchForm } from "@/shared/components/search-form/search-form";
 import { Toolbar } from "@/shared/components/toolbar";
 import { Button } from "@/shared/components/ui/button";
@@ -19,28 +20,24 @@ export default async function GroupsPage() {
 
 	return (
 		<>
-			<PageContainer className="min-h-[100dvh] relative overflow-hidden">
+			<PageHeader
+				title="Vos groupes"
+				description="Gérez vos groupes et invitez vos gars sûrs"
+				action={
+					<Link
+						href="/profile"
+						className="relative group p-3 rounded-xl bg-card/50 backdrop-blur-sm border hover:bg-card/80 transition-all duration-300 hover:shadow-lg"
+						title="Voir le profil"
+					>
+						<div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+						<User className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors relative z-10" />
+					</Link>
+				}
+			/>
+
+			<PageContainer className="min-h-[100dvh] relative overflow-hidden pt-20 sm:pt-24 pb-24 sm:pb-28">
 				{/* Main Content */}
-				<div className="relative z-10 flex flex-col min-h-[100dvh]">
-					{/* Header with Profile Action */}
-					<div className="flex items-center justify-between mb-6 sm:mb-8">
-						<div className="relative">
-							<h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading-bold text-foreground tracking-tight">
-								Vos groupes
-							</h1>
-							<div className="absolute -inset-2 bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-lg blur-lg opacity-50" />
-						</div>
-
-						<Link
-							href="/profile"
-							className="relative group p-3 rounded-xl bg-card/50 backdrop-blur-sm border hover:bg-card/80 transition-all duration-300 hover:shadow-lg"
-							title="Voir le profil"
-						>
-							<div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-							<User className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors relative z-10" />
-						</Link>
-					</div>
-
+				<div className="relative z-10 flex flex-col min-h-[calc(100dvh-11rem)] sm:min-h-[calc(100dvh-13rem)]">
 					{/* Groups List */}
 					<div className="flex-1">
 						<GroupList preloadedGroups={preloadedGroups} />
