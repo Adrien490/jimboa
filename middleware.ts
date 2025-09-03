@@ -1,26 +1,9 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { convexAuthNextjsMiddleware } from "@convex-dev/auth/nextjs/server";
 
-// Avec Convex Auth, laissons les composants client gérer l'authentification
-// Le middleware n'est plus nécessaire pour la vérification d'authentification
-export default async function middleware(request: NextRequest) {
-	const { pathname } = request.nextUrl;
-
-	// Ignorer les routes API et les fichiers statiques
-	if (
-		pathname.startsWith("/api/") ||
-		pathname.startsWith("/_next/") ||
-		pathname.includes(".")
-	) {
-		return NextResponse.next();
-	}
-
-	return NextResponse.next();
-}
+export default convexAuthNextjsMiddleware();
 
 export const config = {
-	matcher: [
-		// Only run on pages, not API routes or static files
-		"/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
-	],
+	// The following matcher runs middleware on all routes
+	// except static assets.
+	matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 };

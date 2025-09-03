@@ -1,3 +1,4 @@
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
@@ -50,36 +51,38 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="fr" className="dark" data-theme="dark">
-			<body
-				className={`${satoshi.variable} ${inter.variable} antialiased font-body`}
-			>
-				{/* One-time purge of any previously registered SW + caches */}
-				<ConvexClientProvider>
-					<div className="bg-background">
-						<main>{children}</main>
-					</div>
-					<Toaster
-						position="top-center"
-						expand={false}
-						visibleToasts={3}
-						richColors
-						closeButton
-						className="toaster-custom"
-						toastOptions={{
-							className: "toast-custom",
-							duration: 4000,
-							style: {
-								background: "hsl(var(--card))",
-								border: "1px solid hsl(var(--border))",
-								borderRadius: "12px",
-								backdropFilter: "blur(12px)",
-								boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-							},
-						}}
-					/>
-				</ConvexClientProvider>
-			</body>
-		</html>
+		<ConvexAuthNextjsServerProvider>
+			<html lang="fr" className="dark" data-theme="dark">
+				<body
+					className={`${satoshi.variable} ${inter.variable} antialiased font-body`}
+				>
+					{/* One-time purge of any previously registered SW + caches */}
+					<ConvexClientProvider>
+						<div className="bg-background">
+							<main>{children}</main>
+						</div>
+						<Toaster
+							position="top-center"
+							expand={false}
+							visibleToasts={3}
+							richColors
+							closeButton
+							className="toaster-custom"
+							toastOptions={{
+								className: "toast-custom",
+								duration: 4000,
+								style: {
+									background: "hsl(var(--card))",
+									border: "1px solid hsl(var(--border))",
+									borderRadius: "12px",
+									backdropFilter: "blur(12px)",
+									boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+								},
+							}}
+						/>
+					</ConvexClientProvider>
+				</body>
+			</html>
+		</ConvexAuthNextjsServerProvider>
 	);
 }
