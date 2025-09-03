@@ -1,13 +1,8 @@
-import { CreateGroupForm } from "@/domains/group/features/create-group/create-group-form";
-import { getServerAuth } from "@/lib/server-auth";
+import { CreateGroupForm } from "@/domains/group/features/create-group";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
-import { redirect } from "next/navigation";
 
-export default async function NewGroupPage() {
-	const { userId } = await getServerAuth();
-	if (!userId) redirect("/");
-
+export default function NewGroupPage() {
 	return (
 		<>
 			<PageHeader

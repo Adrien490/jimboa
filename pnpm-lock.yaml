@@ -47,6 +47,9 @@ importers:
       framer-motion:
         specifier: ^10.18.0
         version: 10.18.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      jose:
+        specifier: ^6.1.0
+        version: 6.1.0
       lucide-react:
         specifier: ^0.542.0
         version: 0.542.0(react@19.1.1)
@@ -1877,6 +1880,9 @@ packages:
 
   jose@5.10.0:
     resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
+
+  jose@6.1.0:
+    resolution: {integrity: sha512-TTQJyoEoKcC1lscpVDCSsVgYzUDg/0Bt3WE//WiTPK6uOCQC2KZS4MpugbMWt/zyjkopgZoXhZuCi00gLudfUA==}
 
   js-cookie@3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
@@ -4357,6 +4363,8 @@ snapshots:
   jiti@2.5.1: {}
 
   jose@5.10.0: {}
+
+  jose@6.1.0: {}
 
   js-cookie@3.0.5:
     optional: true
