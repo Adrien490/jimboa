@@ -1,19 +1,17 @@
 "use client";
 
-import { authClient } from "@/domains/auth/lib/auth-client";
 import { Button } from "@/shared/components/ui/button";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 
 export function GoogleSignInButton() {
+	const { signIn } = useAuthActions();
 	const [isLoading, setIsLoading] = useState(false);
 
 	const handleGoogle = async () => {
 		try {
 			setIsLoading(true);
-			await authClient.signIn.social({
-				provider: "google",
-				callbackURL: "/groups",
-			});
+			await signIn("google", { redirectTo: "/groups" });
 		} catch (error) {
 			console.error("Erreur lors de la connexion Google:", error);
 		} finally {

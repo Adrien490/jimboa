@@ -1,20 +1,17 @@
 // convex/schema.ts
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-	// --- Utilisateurs (pour Better Auth) ---
-	users: defineTable({
-		// Email synchronisé depuis Better Auth
-		email: v.optional(v.string()),
-	}),
+	...authTables,
 
 	// --- Groupes ---
 	groups: defineTable({
 		name: v.string(),
-		code: v.string(), // unique logique (contrôle via index/mutation)
-		ownerId: v.union(v.id("users"), v.string()), // Better Auth user ID ou ancien Clerk ID (owner formel du groupe)
-		type: v.optional(v.union(v.literal("friends"), v.literal("couple"))), // Type de groupe
+		code: v.string(),
+		ownerId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		type: v.optional(v.union(v.literal("friends"), v.literal("couple"))),
 		imageId: v.optional(v.id("_storage")),
 		dailyHour: v.number(), // 0..23
 		dailyMinute: v.number(), // 0..59
@@ -29,7 +26,7 @@ export default defineSchema({
 	// --- Adhésions ---
 	memberships: defineTable({
 		groupId: v.id("groups"),
-		userId: v.union(v.id("users"), v.string()), // Better Auth user ID ou ancien Clerk ID
+		userId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
 		role: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
 		status: v.optional(
 			v.union(v.literal("active"), v.literal("left"), v.literal("banned"))
@@ -47,7 +44,7 @@ export default defineSchema({
 	// --- Prompts (un par jour et par groupe) ---
 	prompts: defineTable({
 		groupId: v.id("groups"),
-		localDate: v.string(), // "YYYY-MM-DD" (selon groups.timezone si présent)
+		localDate: v.string(), // "YYYY-MM-DD"
 		type: v.union(
 			v.literal("question"),
 			v.literal("vote"),
@@ -63,8 +60,8 @@ export default defineSchema({
 			v.literal("closed"),
 			v.literal("cancelled")
 		),
-		createdBy: v.union(v.id("users"), v.string()), // Better Auth user ID ou ancien Clerk ID
-		optionCounts: v.optional(v.array(v.number())), // aligné sur options.length
+		createdBy: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		optionCounts: v.optional(v.array(v.number())),
 		resultsFinalizedAt: v.optional(v.number()),
 		deletedAt: v.optional(v.number()),
 		createdAt: v.number(),
@@ -79,7 +76,7 @@ export default defineSchema({
 	// --- Submissions ---
 	submissions: defineTable({
 		promptId: v.id("prompts"),
-		userId: v.union(v.id("users"), v.string()), // Better Auth user ID ou ancien Clerk ID
+		userId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
 		textAnswer: v.optional(v.string()),
 		optionIndex: v.optional(v.number()),
 		voteTargetUserId: v.optional(v.union(v.id("users"), v.string())),

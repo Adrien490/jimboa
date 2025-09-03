@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const protectedRoutes = ["/groups"];
-
+// Avec Convex Auth, laissons les composants client gérer l'authentification
+// Le middleware n'est plus nécessaire pour la vérification d'authentification
 export default async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
@@ -13,25 +13,6 @@ export default async function middleware(request: NextRequest) {
 		pathname.includes(".")
 	) {
 		return NextResponse.next();
-	}
-
-	// Vérifier la présence du cookie d'authentification Better Auth
-	const authCookie =
-		request.cookies.get("better-auth.session_token") ||
-		request.cookies.get("better-auth-session") ||
-		request.cookies.get("session") ||
-		request.cookies.get("authjs.session-token");
-
-	const isAuthenticated = !!authCookie?.value;
-
-	// Pour l'instant, ne faisons que la protection des routes
-	// Laissons les pages gérer leur propre logique de redirection
-	const isProtectedRoute = protectedRoutes.some((route) =>
-		pathname.startsWith(route)
-	);
-
-	if (isProtectedRoute && !isAuthenticated) {
-		return NextResponse.redirect(new URL("/", request.url));
 	}
 
 	return NextResponse.next();
