@@ -14,5 +14,9 @@ export const createGroupSchema = z.object({
 	type: z.enum(["friends", "couple"], {
 		message: "Veuillez sélectionner un type de groupe",
 	}),
-	image: z.instanceof(File).optional(),
+	imageUrl: z
+		.string()
+		.url("L'URL de l'image doit être valide")
+		.optional()
+		.or(z.literal("")),
 });

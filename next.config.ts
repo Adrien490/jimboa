@@ -5,15 +5,12 @@ const nextConfig: NextConfig = {
 		remotePatterns: [
 			{
 				protocol: "https",
-				hostname: "*.convex.cloud",
-			},
-			{
-				protocol: "https",
 				hostname: "lh3.googleusercontent.com",
 			},
 		],
 	},
 	experimental: {
+		useCache: true,
 		optimizePackageImports: ["framer-motion"],
 	},
 	transpilePackages: ["framer-motion"],

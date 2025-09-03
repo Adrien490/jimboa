@@ -1,6 +1,7 @@
 import z from "zod";
 
 export const updateGroupSchema = z.object({
+	groupId: z.string().min(1, "L'ID du groupe est requis"),
 	name: z
 		.string()
 		.trim()
@@ -11,5 +12,5 @@ export const updateGroupSchema = z.object({
 			(name) => name.length > 0 && name.trim().length > 0,
 			"Le nom ne peut pas être vide"
 		),
-	image: z.instanceof(File).optional(),
+	imageUrl: z.string().optional().or(z.literal("")),
 });

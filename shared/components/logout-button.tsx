@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthActions } from "@convex-dev/auth/react";
+import { authClient } from "@/domains/auth/lib";
 import { Button } from "@/shared/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -24,11 +24,10 @@ export function LogoutButton({
 	className,
 	children,
 }: LogoutButtonProps) {
-	const { signOut } = useAuthActions();
 	const router = useRouter();
 
 	const handleSignOut = async () => {
-		await signOut();
+		await authClient.signOut();
 		router.push("/");
 	};
 

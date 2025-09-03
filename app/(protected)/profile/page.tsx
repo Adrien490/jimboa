@@ -1,14 +1,17 @@
-import { getServerAuth } from "@/lib/server-auth";
+import { auth } from "@/auth";
 import { LogoutButton } from "@/shared/components/logout-button";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 import { ArrowLeft, Mail, Settings, User } from "lucide-react";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 
 export default async function ProfilePage() {
-	const session = await getServerAuth();
+	const session = await auth.api.getSession({
+		headers: await headers(),
+	});
 	return (
 		<PageContainer>
 			<PageHeader

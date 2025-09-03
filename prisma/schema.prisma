@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// === AUTH TABLES (Convex Auth équivalent) ===
+
+model User {
+  id    String  @id @default(cuid())
+  email String? @unique
+  name  String?
+  image String?
+
+  // OAuth fields
+  accounts Account[]
+  sessions Session[]
+
+  // App-specific fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedGroups    Group[]      @relation("GroupOwner")
+  memberships    Membership[]
+  createdPrompts Prompt[]     @relation("PromptCreator")
+  submissions    Submission[]
+  votesReceived  Submission[] @relation("VoteTarget")
+  passkeys       Passkey[]
+  emailVerified  Boolean
+
+  @@map("user")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String    @unique
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime @default(now())
+  aaguid       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkey")
+}
+
+// === APP TABLES ===
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  ownerId     String
+  type        GroupType @default(FRIENDS)
+  imageUrl    String? // URL for group image
+  dailyHour   Int       @default(9) // 0..23
+  dailyMinute Int       @default(0) // 0..59
+  maxMembers  Int       @default(50)
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  // Relations
+  owner       User         @relation("GroupOwner", fields: [ownerId], references: [id])
+  memberships Membership[]
+  prompts     Prompt[]
+
+  @@index([code])
+  @@index([ownerId])
+  @@index([name])
+}
+
+model Membership {
+  id          String           @id @default(cuid())
+  groupId     String
+  userId      String
+  role        MembershipRole   @default(MEMBER)
+  status      MembershipStatus @default(ACTIVE)
+  nickname    String?
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([groupId, role])
+}
+
+model Prompt {
+  id                 String       @id @default(cuid())
+  groupId            String
+  localDate          String // "YYYY-MM-DD"
+  type               PromptType
+  text               String
+  options            String[]     @default([]) // JSON array for vote options
+  opensAt            DateTime
+  closesAt           DateTime?
+  status             PromptStatus @default(SCHEDULED)
+  createdBy          String
+  optionCounts       Int[]        @default([]) // Vote counts per option
+  resultsFinalizedAt DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime     @default(now())
+
+  // Relations
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator     User         @relation("PromptCreator", fields: [createdBy], references: [id])
+  submissions Submission[]
+
+  @@unique([groupId, localDate])
+  @@index([groupId, status])
+  @@index([groupId, opensAt])
+  @@index([groupId, closesAt])
+  @@index([groupId, localDate, type])
+}
+
+model Submission {
+  id               String          @id @default(cuid())
+  promptId         String
+  userId           String
+  textAnswer       String?
+  optionIndex      Int? // For vote submissions
+  voteTargetUserId String? // For voting on other users
+  proofId          String? // Storage ID for proof/image
+  isEdited         Boolean         @default(false)
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  flagged          Boolean         @default(false)
+  moderationState  ModerationState @default(PENDING)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Relations
+  prompt     Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voteTarget User?  @relation("VoteTarget", fields: [voteTargetUserId], references: [id])
+
+  @@unique([userId, promptId])
+  @@index([promptId])
+  @@index([promptId, optionIndex])
+  @@index([promptId, voteTargetUserId])
+  @@index([promptId, moderationState])
+}
+
+// === ENUMS ===
+
+enum GroupType {
+  FRIENDS
+  COUPLE
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+  BANNED
+}
+
+enum PromptType {
+  QUESTION
+  VOTE
+  CHALLENGE
+}
+
+enum PromptStatus {
+  SCHEDULED
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum ModerationState {
+  PENDING
+  APPROVED
+  REJECTED
+}

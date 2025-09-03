@@ -1,5 +1,5 @@
-import { ConvexReactClient } from "convex/react";
+import { createAuthClient } from "better-auth/react";
 
-export const convex = new ConvexReactClient(
-	process.env.NEXT_PUBLIC_CONVEX_URL!
-);
+export const authClient = createAuthClient({
+	baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+});

@@ -1,7 +1,8 @@
-import { GoogleSignInButton } from "@/shared/components/google-signin-button";
+import { SignInSocialForm } from "@/domains/auth/features/sign-in-social";
 import { Particles } from "@/shared/components/particles";
 import { ArrowRight, HelpCircle, Shield, Users, Zap } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
 const features = [
 	{
@@ -85,7 +86,18 @@ export default function Home() {
 
 					{/* CTA Section */}
 					<div className="w-full max-w-md space-y-4 sm:space-y-6">
-						<GoogleSignInButton />
+						<Suspense
+							fallback={
+								<div className="relative group">
+									<div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-20"></div>
+									<div className="relative w-full h-14 sm:h-16 bg-white/80 rounded-2xl flex items-center justify-center">
+										<div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+									</div>
+								</div>
+							}
+						>
+							<SignInSocialForm />
+						</Suspense>
 
 						{/* FAQ Button */}
 						<div className="flex justify-center">
