@@ -163,6 +163,37 @@ export const get = query({
 	},
 });
 
+// Public query to get group info by code (for HTTP actions and sharing)
+export const getByCode = query({
+	args: { code: v.string() },
+	handler: async (ctx, { code }) => {
+		const group = await ctx.db
+			.query("groups")
+			.withIndex("by_code", (q) => q.eq("code", code))
+			.unique();
+
+		if (!group || group.deletedAt) return null;
+
+		// Count active members
+		const memberships = await ctx.db
+			.query("memberships")
+			.withIndex("by_group", (q) => q.eq("groupId", group._id))
+			.collect();
+
+		const activeMemberships = memberships.filter((m) => m.status === "active");
+
+		return {
+			_id: group._id,
+			name: group.name,
+			type: group.type || "friends",
+			memberCount: activeMemberships.length,
+			maxMembers: group.maxMembers,
+			createdAt: group.createdAt,
+			// Don't expose sensitive information like ownerId in public API
+		};
+	},
+});
+
 export const members = query({
 	args: { groupId: v.id("groups") },
 	handler: async (ctx, { groupId }) => {
