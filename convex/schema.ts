@@ -10,7 +10,7 @@ export default defineSchema({
 	groups: defineTable({
 		name: v.string(),
 		code: v.string(),
-		ownerId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		ownerId: v.id("users"), // Convex Auth user ID
 		type: v.optional(v.union(v.literal("friends"), v.literal("couple"))),
 		imageId: v.optional(v.id("_storage")),
 		dailyHour: v.number(), // 0..23
@@ -26,7 +26,7 @@ export default defineSchema({
 	// --- Adhésions ---
 	memberships: defineTable({
 		groupId: v.id("groups"),
-		userId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		userId: v.id("users"), // Convex Auth user ID
 		role: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
 		status: v.optional(
 			v.union(v.literal("active"), v.literal("left"), v.literal("banned"))
@@ -60,7 +60,7 @@ export default defineSchema({
 			v.literal("closed"),
 			v.literal("cancelled")
 		),
-		createdBy: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		createdBy: v.id("users"), // Convex Auth user ID
 		optionCounts: v.optional(v.array(v.number())),
 		resultsFinalizedAt: v.optional(v.number()),
 		deletedAt: v.optional(v.number()),
@@ -76,10 +76,10 @@ export default defineSchema({
 	// --- Submissions ---
 	submissions: defineTable({
 		promptId: v.id("prompts"),
-		userId: v.union(v.id("users"), v.string()), // Convex Auth user ID ou ancien Clerk ID
+		userId: v.id("users"), // Convex Auth user ID
 		textAnswer: v.optional(v.string()),
 		optionIndex: v.optional(v.number()),
-		voteTargetUserId: v.optional(v.union(v.id("users"), v.string())),
+		voteTargetUserId: v.optional(v.id("users")),
 		proofId: v.optional(v.id("_storage")),
 		isEdited: v.optional(v.boolean()),
 		editedAt: v.optional(v.number()),
