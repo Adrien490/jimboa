@@ -44,7 +44,7 @@ export const create = mutation({
 		const groupId = await ctx.db.insert("groups", {
 			name,
 			code,
-			ownerId: userId as string,
+			ownerId: userId as Id<"users">,
 			type,
 			imageId,
 			dailyHour: 9, // 9h par défaut
@@ -56,7 +56,7 @@ export const create = mutation({
 		// Add owner as a member with owner role
 		await ctx.db.insert("memberships", {
 			groupId,
-			userId: userId as string,
+			userId: userId as Id<"users">,
 			role: "owner",
 			status: "active",
 			createdAt: Date.now(),
@@ -82,13 +82,13 @@ export const joinWithCode = mutation({
 		const existing = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId as string).eq("groupId", group._id)
+				q.eq("userId", userId as Id<"users">).eq("groupId", group._id)
 			)
 			.unique();
 		if (!existing) {
 			await ctx.db.insert("memberships", {
 				groupId: group._id,
-				userId: userId as string,
+				userId: userId as Id<"users">,
 				role: "member",
 				status: "active",
 				createdAt: Date.now(),
@@ -109,7 +109,7 @@ export const getMy = query({
 
 		const myMemberships = await ctx.db
 			.query("memberships")
-			.withIndex("by_user", (q) => q.eq("userId", userId as string))
+			.withIndex("by_user", (q) => q.eq("userId", userId as Id<"users">))
 			.collect();
 
 		const groups = await Promise.all(
@@ -155,7 +155,7 @@ export const get = query({
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId as string).eq("groupId", id)
+				q.eq("userId", userId as Id<"users">).eq("groupId", id)
 			)
 			.unique();
 		if (!membership) return null;
@@ -176,7 +176,7 @@ export const members = query({
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId as string).eq("groupId", groupId)
+				q.eq("userId", userId as Id<"users">).eq("groupId", groupId)
 			)
 			.unique();
 		if (!membership) return [];
@@ -200,7 +200,7 @@ export const leave = mutation({
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId as string).eq("groupId", groupId)
+				q.eq("userId", userId as Id<"users">).eq("groupId", groupId)
 			)
 			.unique();
 		if (membership) await ctx.db.delete(membership._id);

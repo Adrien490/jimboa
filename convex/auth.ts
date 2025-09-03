@@ -39,7 +39,7 @@ export const {
 		// Delete the user's data if the user is being deleted
 		const groups = await ctx.db
 			.query("groups")
-			.withIndex("by_owner", (q) => q.eq("ownerId", userId as string))
+			.withIndex("by_owner", (q) => q.eq("ownerId", userId as Id<"users">))
 			.collect();
 		await asyncMap(groups, async (group) => {
 			await ctx.db.delete(group._id);
@@ -47,7 +47,7 @@ export const {
 
 		const memberships = await ctx.db
 			.query("memberships")
-			.withIndex("by_user", (q) => q.eq("userId", userId as string))
+			.withIndex("by_user", (q) => q.eq("userId", userId as Id<"users">))
 			.collect();
 		await asyncMap(memberships, async (membership) => {
 			await ctx.db.delete(membership._id);

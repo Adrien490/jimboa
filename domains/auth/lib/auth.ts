@@ -1,15 +1,14 @@
 import { convexAdapter } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { requireEnv } from "@convex-dev/better-auth/utils";
 import { betterAuth } from "better-auth";
 import { type ActionCtx } from "../../../convex/_generated/server";
 import { betterAuthComponent } from "../../../convex/auth";
 
-const siteUrl = requireEnv("SITE_URL");
+export const createAuth = (ctx: ActionCtx) => {
+	// Utiliser la variable d'environnement SITE_URL ou une valeur par défaut
+	const siteUrl = process.env.SITE_URL || "https://jimbao.fr";
 
-export const createAuth = (ctx: ActionCtx) =>
-	// Configure your Better Auth instance here
-	betterAuth({
+	return betterAuth({
 		// All auth requests will be proxied through your next.js server
 		baseURL: siteUrl,
 		database: convexAdapter(ctx, betterAuthComponent),
@@ -33,3 +32,4 @@ export const createAuth = (ctx: ActionCtx) =>
 			convex(),
 		],
 	});
+};
