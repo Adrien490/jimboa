@@ -9,7 +9,7 @@ export const buildSearchConditions = (
 	search: string
 ): Prisma.GroupWhereInput[] => {
 	const searchTerm = search.trim();
-	
+
 	if (!searchTerm) {
 		return [];
 	}
