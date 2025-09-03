@@ -1,18 +1,16 @@
-import { LoginButton } from "@/shared/components/login-button";
+import { getServerAuth } from "@/lib/server-auth";
+import { LogoutButton } from "@/shared/components/logout-button";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { ArrowLeft, Mail, Settings, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
-	const { userId } = await auth();
+	const { user, userId } = await getServerAuth();
 	if (!userId) redirect("/");
-
-	const user = await currentUser();
 
 	return (
 		<PageContainer>
@@ -35,10 +33,10 @@ export default async function ProfilePage() {
 				<CardHeader className="text-center pb-4">
 					<div className="flex justify-center mb-4">
 						<div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-							{user?.imageUrl ? (
+							{user?.image ? (
 								<Image
-									src={user.imageUrl}
-									alt={user?.fullName || "User"}
+									src={user.image}
+									alt={user?.name || "User"}
 									className="w-20 h-20 rounded-full object-cover"
 									width={80}
 									height={80}
@@ -48,13 +46,9 @@ export default async function ProfilePage() {
 							)}
 						</div>
 					</div>
-					{user?.fullName && (
-						<h2 className="text-xl font-semibold">{user.fullName}</h2>
-					)}
-					{user?.primaryEmailAddress && (
-						<p className="text-muted-foreground text-sm">
-							{user.primaryEmailAddress.emailAddress}
-						</p>
+					{user?.name && <h2 className="text-xl font-semibold">{user.name}</h2>}
+					{user?.email && (
+						<p className="text-muted-foreground text-sm">{user.email}</p>
 					)}
 				</CardHeader>
 			</Card>
@@ -71,7 +65,7 @@ export default async function ProfilePage() {
 							<div className="flex-1">
 								<h3 className="font-medium">Email</h3>
 								<p className="text-sm text-muted-foreground">
-									{user?.primaryEmailAddress?.emailAddress || "Non défini"}
+									{user?.email || "Non défini"}
 								</p>
 							</div>
 						</div>
@@ -99,7 +93,7 @@ export default async function ProfilePage() {
 			{/* Bouton de déconnexion */}
 			<Card className="border-destructive/20">
 				<CardContent className="p-4">
-					<LoginButton className="w-full" />
+					<LogoutButton className="w-full" />
 				</CardContent>
 			</Card>
 

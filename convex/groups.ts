@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { betterAuthComponent } from "./auth";
 
 function randomCode(len = 6) {
 	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // avoid ambiguous chars
@@ -13,8 +14,8 @@ function randomCode(len = 6) {
 // Generate upload URL for group image
 export const generateUploadUrl = mutation({
 	handler: async (ctx) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 		return await ctx.storage.generateUploadUrl();
 	},
 });
@@ -26,9 +27,8 @@ export const create = mutation({
 		imageId: v.optional(v.id("_storage")),
 	},
 	handler: async (ctx, { name, type, imageId }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
-		const userId = identity.subject;
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 
 		// Generate a unique invite code
 		let code = randomCode(6);
@@ -44,7 +44,7 @@ export const create = mutation({
 		const groupId = await ctx.db.insert("groups", {
 			name,
 			code,
-			ownerId: userId,
+			ownerId: userId as string,
 			type,
 			imageId,
 			dailyHour: 9, // 9h par défaut
@@ -56,7 +56,7 @@ export const create = mutation({
 		// Add owner as a member with owner role
 		await ctx.db.insert("memberships", {
 			groupId,
-			userId,
+			userId: userId as string,
 			role: "owner",
 			status: "active",
 			createdAt: Date.now(),
@@ -69,9 +69,8 @@ export const create = mutation({
 export const joinWithCode = mutation({
 	args: { code: v.string() },
 	handler: async (ctx, { code }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
-		const userId = identity.subject;
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 
 		const group = await ctx.db
 			.query("groups")
@@ -83,13 +82,13 @@ export const joinWithCode = mutation({
 		const existing = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId).eq("groupId", group._id)
+				q.eq("userId", userId as string).eq("groupId", group._id)
 			)
 			.unique();
 		if (!existing) {
 			await ctx.db.insert("memberships", {
 				groupId: group._id,
-				userId,
+				userId: userId as string,
 				role: "member",
 				status: "active",
 				createdAt: Date.now(),
@@ -105,13 +104,12 @@ export const getMy = query({
 		search: v.optional(v.string()),
 	},
 	handler: async (ctx, { search }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) return [];
-		const userId = identity.subject;
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) return [];
 
 		const myMemberships = await ctx.db
 			.query("memberships")
-			.withIndex("by_user", (q) => q.eq("userId", userId))
+			.withIndex("by_user", (q) => q.eq("userId", userId as string))
 			.collect();
 
 		const groups = await Promise.all(
@@ -150,14 +148,14 @@ export const getMy = query({
 export const get = query({
 	args: { id: v.id("groups") },
 	handler: async (ctx, { id }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) return null;
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) return null;
 		const group = await ctx.db.get(id);
 		if (!group || group.deletedAt) return null; // Exclure les groupes supprimés
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", identity.subject).eq("groupId", id)
+				q.eq("userId", userId as string).eq("groupId", id)
 			)
 			.unique();
 		if (!membership) return null;
@@ -168,8 +166,8 @@ export const get = query({
 export const members = query({
 	args: { groupId: v.id("groups") },
 	handler: async (ctx, { groupId }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) return [];
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) return [];
 
 		// Vérifier que le groupe existe et n'est pas supprimé
 		const group = await ctx.db.get(groupId);
@@ -178,7 +176,7 @@ export const members = query({
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", identity.subject).eq("groupId", groupId)
+				q.eq("userId", userId as string).eq("groupId", groupId)
 			)
 			.unique();
 		if (!membership) return [];
@@ -193,9 +191,8 @@ export const members = query({
 export const leave = mutation({
 	args: { groupId: v.id("groups") },
 	handler: async (ctx, { groupId }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
-		const userId = identity.subject;
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 		const group = await ctx.db.get(groupId);
 		if (!group) throw new Error("Group not found");
 		if (group.ownerId == userId)
@@ -203,7 +200,7 @@ export const leave = mutation({
 		const membership = await ctx.db
 			.query("memberships")
 			.withIndex("by_user_group", (q) =>
-				q.eq("userId", userId).eq("groupId", groupId)
+				q.eq("userId", userId as string).eq("groupId", groupId)
 			)
 			.unique();
 		if (membership) await ctx.db.delete(membership._id);
@@ -214,11 +211,11 @@ export const leave = mutation({
 export const rename = mutation({
 	args: { id: v.id("groups"), name: v.string() },
 	handler: async (ctx, { id, name }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 		const group = await ctx.db.get(id);
 		if (!group) throw new Error("Group not found");
-		if (group.ownerId !== identity.subject) throw new Error("Not authorized");
+		if (group.ownerId !== userId) throw new Error("Not authorized");
 		await ctx.db.patch(id, { name });
 		return { id };
 	},
@@ -231,12 +228,12 @@ export const update = mutation({
 		imageId: v.optional(v.id("_storage")),
 	},
 	handler: async (ctx, { id, name, imageId }) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
+		const userId = await betterAuthComponent.getAuthUserId(ctx);
+		if (!userId) throw new Error("Not authenticated");
 
 		const group = await ctx.db.get(id);
 		if (!group) throw new Error("Group not found");
-		if (group.ownerId !== identity.subject) throw new Error("Not authorized");
+		if (group.ownerId !== userId) throw new Error("Not authorized");
 
 		// Prepare update data
 		const updateData: { name: string; imageId?: Id<"_storage"> } = { name };

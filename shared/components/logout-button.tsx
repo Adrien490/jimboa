@@ -1,11 +1,11 @@
 "use client";
 
+import { authClient } from "@/domains/auth/lib/auth-client";
 import { Button } from "@/shared/components/ui/button";
-import { useClerk } from "@clerk/nextjs";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-interface LoginButtonProps {
+interface LogoutButtonProps {
 	variant?:
 		| "default"
 		| "destructive"
@@ -18,17 +18,16 @@ interface LoginButtonProps {
 	children?: React.ReactNode;
 }
 
-export function LoginButton({
+export function LogoutButton({
 	variant = "destructive",
 	size = "default",
 	className,
 	children,
-}: LoginButtonProps) {
-	const { signOut } = useClerk();
+}: LogoutButtonProps) {
 	const router = useRouter();
 
 	const handleSignOut = async () => {
-		await signOut();
+		await authClient.signOut();
 		router.push("/");
 	};
 

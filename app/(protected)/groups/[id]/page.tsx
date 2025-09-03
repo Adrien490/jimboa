@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { auth } from "@clerk/nextjs/server";
+import { getServerAuth } from "@/lib/server-auth";
 import { preloadQuery } from "convex/nextjs";
 import { redirect } from "next/navigation";
 import { GroupContent } from "./group-content";
@@ -10,20 +10,15 @@ interface GroupPageProps {
 }
 
 export default async function GroupPage({ params }: GroupPageProps) {
-	const session = await auth();
-	if (!session.userId) redirect("/");
+	const { userId } = await getServerAuth();
+	if (!userId) redirect("/");
 
 	const resolvedParams = await params;
 	const groupId = resolvedParams.id as Id<"groups">;
 
-	const token = (await session.getToken({ template: "convex" })) ?? undefined;
-
 	try {
-		const preloadedGroup = await preloadQuery(
-			api.groups.get,
-			{ id: groupId },
-			{ token }
-		);
+		// Précharger le groupe (Convex gérera l'authentification automatiquement)
+		const preloadedGroup = await preloadQuery(api.groups.get, { id: groupId });
 
 		return <GroupContent preloadedGroup={preloadedGroup} />;
 	} catch (error) {

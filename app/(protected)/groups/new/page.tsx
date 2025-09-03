@@ -1,11 +1,11 @@
 import { CreateGroupForm } from "@/domains/group/features/create-group/create-group-form";
+import { getServerAuth } from "@/lib/server-auth";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 export default async function NewGroupPage() {
-	const { userId } = await auth();
+	const { userId } = await getServerAuth();
 	if (!userId) redirect("/");
 
 	return (

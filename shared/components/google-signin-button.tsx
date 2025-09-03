@@ -1,18 +1,24 @@
 "use client";
 
+import { authClient } from "@/domains/auth/lib/auth-client";
 import { Button } from "@/shared/components/ui/button";
-import { useSignIn } from "@clerk/nextjs";
+import { useState } from "react";
 
 export function GoogleSignInButton() {
-	const { isLoaded, signIn } = useSignIn();
+	const [isLoading, setIsLoading] = useState(false);
 
 	const handleGoogle = async () => {
-		if (!isLoaded) return;
-		await signIn?.authenticateWithRedirect({
-			strategy: "oauth_google",
-			redirectUrl: "/groups",
-			redirectUrlComplete: "/groups",
-		});
+		try {
+			setIsLoading(true);
+			await authClient.signIn.social({
+				provider: "google",
+				callbackURL: "/groups",
+			});
+		} catch (error) {
+			console.error("Erreur lors de la connexion Google:", error);
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -22,7 +28,7 @@ export function GoogleSignInButton() {
 
 			<Button
 				onClick={handleGoogle}
-				disabled={!isLoaded}
+				disabled={isLoading}
 				className="relative w-full h-14 sm:h-16 bg-white text-gray-900 hover:bg-gray-50 font-heading-semibold text-base sm:text-lg rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center space-x-3 border-2 border-white/20"
 			>
 				<svg
@@ -49,7 +55,7 @@ export function GoogleSignInButton() {
 				<span className="font-medium tracking-wide">Continuer avec Google</span>
 
 				{/* Loading spinner overlay */}
-				{!isLoaded && (
+				{isLoading && (
 					<div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
 						<div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
 					</div>

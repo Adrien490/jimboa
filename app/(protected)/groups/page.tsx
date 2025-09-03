@@ -1,10 +1,12 @@
 import { api } from "@/convex/_generated/api";
+import { createAuth } from "@/domains/auth/lib/auth";
+import { getServerAuth } from "@/lib/server-auth";
 import { GroupList } from "@/shared/components/group-list";
 import { PageContainer } from "@/shared/components/page-container";
 import { PageHeader } from "@/shared/components/page-header";
 import { SearchForm } from "@/shared/components/search-form/search-form";
 import { Toolbar } from "@/shared/components/toolbar";
-import { auth } from "@clerk/nextjs/server";
+import { getToken } from "@convex-dev/better-auth/nextjs";
 import { preloadQuery } from "convex/nextjs";
 import { Plus, User, Users } from "lucide-react";
 import Link from "next/link";
@@ -15,13 +17,16 @@ interface GroupsPageProps {
 }
 
 export default async function GroupsPage({ searchParams }: GroupsPageProps) {
-	const session = await auth();
-	if (!session.userId) redirect("/");
+	const { userId } = await getServerAuth();
+	if (!userId) redirect("/");
 
 	const resolvedSearchParams = await searchParams;
 	const search = resolvedSearchParams?.search;
 
-	const token = (await session.getToken({ template: "convex" })) ?? undefined;
+	// Obtenir le token pour preloadQuery
+	const token = await getToken(createAuth);
+
+	// Précharger les groupes avec le token
 	const preloadedGroups = await preloadQuery(
 		api.groups.getMy,
 		{ search },

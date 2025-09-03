@@ -1,29 +1,45 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher(["/groups(.*)"]);
+const protectedRoutes = ["/groups"];
 
-export default clerkMiddleware(async (auth, req) => {
-	const { userId } = await auth();
+export default async function middleware(request: NextRequest) {
+	const { pathname } = request.nextUrl;
 
-	// Rediriger vers /groups si connecté et sur la page d'accueil
-	if (userId && req.nextUrl.pathname === "/") {
-		return NextResponse.redirect(new URL("/groups", req.url));
+	// Ignorer les routes API et les fichiers statiques
+	if (
+		pathname.startsWith("/api/") ||
+		pathname.startsWith("/_next/") ||
+		pathname.includes(".")
+	) {
+		return NextResponse.next();
 	}
 
-	// Protéger les routes /groups
-	if (isProtectedRoute(req)) {
-		if (!userId) {
-			return NextResponse.redirect(new URL("/", req.url));
-		}
+	// Vérifier la présence du cookie d'authentification Better Auth
+	const authCookie =
+		request.cookies.get("better-auth.session_token") ||
+		request.cookies.get("better-auth-session") ||
+		request.cookies.get("session") ||
+		request.cookies.get("authjs.session-token");
+
+	const isAuthenticated = !!authCookie?.value;
+
+	// Pour l'instant, ne faisons que la protection des routes
+	// Laissons les pages gérer leur propre logique de redirection
+	const isProtectedRoute = protectedRoutes.some((route) =>
+		pathname.startsWith(route)
+	);
+
+	if (isProtectedRoute && !isAuthenticated) {
+		return NextResponse.redirect(new URL("/", request.url));
 	}
-});
+
+	return NextResponse.next();
+}
 
 export const config = {
 	matcher: [
-		// Skip Next.js internals and all static files, unless found in search params
-		"/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-		// Always run for API routes
-		"/(api|trpc)(.*)",
+		// Only run on pages, not API routes or static files
+		"/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
 	],
 };
