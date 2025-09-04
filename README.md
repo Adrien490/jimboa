@@ -78,7 +78,7 @@ graph LR
 
 1. **Planification** : Heure locale du groupe
 2. **Ouverture** : Notification automatique à tous les membres
-3. **Participation** : Soumissions visibles immédiatement (pas de mode "blind")
+3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
 4. **Interactions** : Commentaires et votes visibles après avoir soumis sa réponse
 5. **Vote** : Si type="vote", 1 vote par personne maximum
 6. **Rappel** : Notification avant fermeture (opt-in)
@@ -92,6 +92,10 @@ graph LR
 - **Rôles** : `owner` unique / `admin` / `member`
 - **Invitations** : Code permanent modifiable, généré automatiquement
 - **Image de profil** : Avatar personnalisable pour chaque groupe
+  - Formats supportés : JPEG, PNG, WebP
+  - Taille maximale : 2MB
+  - Redimensionnement automatique vers plusieurs tailles
+  - Suppression en cascade lors de la suppression du groupe
 - **Authentification** : Google OAuth uniquement
 - **Configuration** : Email du créateur défini via `APP_CREATOR_EMAIL` dans .env
 
@@ -110,7 +114,7 @@ graph LR
 
 ### 💬 Interactions sociales
 
-- **Soumissions** : Texte + médias, 1 par user/manche, visibles uniquement après avoir soumis, pas d'édition
+- **Soumissions** : Texte + médias, 1 par user/manche, visibles après avoir soumis sa propre réponse, pas d'édition
 - **Suppression** : Possible pendant la fenêtre ouverte (libère le quota pour re-soumission)
 - **Commentaires** : Discussion globale sous chaque question du jour (visible après avoir soumis)
 - **Votes** : 1 vote par manche (type "vote" uniquement)
@@ -206,14 +210,14 @@ erDiagram
 
 #### 🎯 Prompts & Manches
 
-| Table                  | Champs principaux                                                                                                                                                                 | Contraintes                                                            |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **global_prompts**     | `type` (question\|vote\|challenge), `title`, `body`, `status` (pending\|approved\|rejected\|archived), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb) | Banque globale curatée, seuls les 'approved' sont visibles aux groupes |
-| **group_prompts**      | `group_id`, `type`, `title`, `body`, `is_active`, `cloned_from_global`, `created_by`, `metadata` (jsonb)                                                                          | Prompts locaux créés/clonés par owners/admins                          |
-| **group_prompt_suggestions** | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (pending\|approved\|rejected), `feedback`                                                                      | Suggestions membres → banque locale (modération owner/admin)           |
-| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions prompts locaux → banque globale (modération app creator)  |
-| **daily_rounds**       | `group_id`, `global_prompt_id`, `group_prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed)                                                                            | UNIQUE(group_id, scheduled_for), utilise soit global soit group prompt |
-| **submissions**        | `round_id`, `author_id`, `content_text`                                                                                                                                           | UNIQUE(round_id, author_id)                                            |
+| Table                         | Champs principaux                                                                                                                                                                 | Contraintes                                                            |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **global_prompts**            | `type` (question\|vote\|challenge), `title`, `body`, `status` (pending\|approved\|rejected\|archived), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb) | Banque globale curatée, seuls les 'approved' sont visibles aux groupes |
+| **group_prompts**             | `group_id`, `type`, `title`, `body`, `is_active`, `cloned_from_global`, `created_by`, `metadata` (jsonb)                                                                          | Prompts locaux créés/clonés par owners/admins                          |
+| **group_prompt_suggestions**  | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (pending\|approved\|rejected), `feedback`                                                                           | Suggestions membres → banque locale (modération owner/admin)           |
+| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions prompts locaux → banque globale (modération app creator)   |
+| **daily_rounds**              | `group_id`, `global_prompt_id`, `group_prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed)                                                                            | UNIQUE(group_id, scheduled_for), utilise soit global soit group prompt |
+| **submissions**               | `round_id`, `author_id`, `content_text`                                                                                                                                           | UNIQUE(round_id, author_id)                                            |
 
 #### 💬 Interactions
 
@@ -240,7 +244,7 @@ erDiagram
 | **1 soumission/user/round**       | Une participation par manche, pas d'édition  | `UNIQUE(round_id, author_id)`                                     |
 | **Suppression = nouvelle chance** | Supprimer libère le quota pour re-soumission | Suppression possible uniquement pendant round ouvert              |
 | **1 vote/user/round**             | Vote unique, pas d'auto-vote                 | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
-| **Visibilité immédiate**          | Pas de mode "blind"                          | Soumissions visibles dès publication                              |
+| **Visibilité conditionnelle**     | Soumissions visibles après participation     | Soumissions visibles après avoir soumis sa propre réponse         |
 | **Visibilité conditionnelle**     | Interactions après soumission                | Commentaires/votes visibles après avoir soumis sa réponse         |
 
 #### 🔐 Règles de sécurité
@@ -530,12 +534,12 @@ flowchart LR
 
 ### 👥 Rôles & Permissions
 
-| Rôle            | Permissions                                                                        | Contraintes                                         |
-| --------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
-| **App Creator** | Modération banque globale + administration système + accès exclusif banque globale | Email défini dans .env, seul accès interface admin  |
-| **Owner**       | Gestion groupe + gestion prompts locaux + modération suggestions locales (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert    |
-| **Admin**       | Gestion prompts locaux + modération suggestions locales + membres (PAS d'accès banque globale)          | Nommé par owner                                     |
-| **Member**      | Participation + interactions + suggestions (vers groupe ET vers global)              | Rôle par défaut, aucun accès direct aux banques de prompts |
+| Rôle            | Permissions                                                                                           | Contraintes                                                |
+| --------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **App Creator** | Modération banque globale + administration système + accès exclusif banque globale                    | Email défini dans .env, seul accès interface admin         |
+| **Owner**       | Gestion groupe + gestion prompts locaux + modération suggestions locales (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert           |
+| **Admin**       | Gestion prompts locaux + modération suggestions locales + membres (PAS d'accès banque globale)        | Nommé par owner                                            |
+| **Member**      | Participation + interactions + suggestions (vers groupe ET vers global)                               | Rôle par défaut, aucun accès direct aux banques de prompts |
 
 ### 📱 Interactions
 

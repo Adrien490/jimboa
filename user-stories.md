@@ -27,7 +27,7 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 
 ## EPIC A — Authentification & Profil (Google OAuth)
 
-### A1 — Créer automatiquement un profil à la première connexion Google
+### A1 — Créer automatiquement un profil à la première connexion Google OAuth
 
 **En tant que** nouvel utilisateur  
 **Je veux** qu'un profil soit créé à partir de mon compte Google  
@@ -184,7 +184,7 @@ Alors je reçois "round_close_soon" (si autorisé par prefs)
 
 ## EPIC C — Groupes (création, rôles, invitations)
 
-### C1 — Créer un groupe (amis/couple)
+### C1 — Créer un groupe (friends/couple)
 
 **En tant qu'** utilisateur  
 **Je veux** créer un groupe avec un type et une image  
@@ -238,8 +238,8 @@ Même si le code hash correspond à groups.join_code
 #### Règles métier
 
 - Code permanent sans expiration ni quota d'utilisation
-- Stockage sécurisé uniquement en hash (code original jamais stocké)
-- Rate limiting : 5 tentatives de join par IP/heure
+- Stockage sécurisé uniquement en hash SHA-256 + salt (code original jamais stocké)
+- Rate limiting : maximum 5 tentatives de join par IP/heure
 - Régénération invalide instantanément l'ancien code
 
 #### Cas limites
@@ -381,7 +381,8 @@ Et l'image est supprimée du storage
 
 - Formats supportés : JPEG, PNG, WebP
 - Taille maximale : 2MB
-- Redimensionnement automatique vers plusieurs tailles (thumbnail, medium, large)
+- Redimensionnement automatique vers plusieurs tailles
+- Suppression en cascade lors de la suppression du groupe
 - Seuls owner et admins peuvent modifier l'image
 
 #### Cas limites
@@ -460,33 +461,94 @@ Alors aucune notif "open/close_soon" n'est émise à l'échelle du groupe (les n
 
 ## EPIC E — Prompts Hybrides (Global + Local)
 
-### E1 — Gérer la banque globale (app creator uniquement)
+### E1 — Accéder à l'interface d'administration globale (app creator uniquement)
 
 **En tant que** créateur de l'app  
-**Je veux** parcourir et gérer la banque globale de prompts  
-**Afin de** maintenir un catalogue de qualité pour tous les groupes
+**Je veux** accéder à une interface d'administration dédiée  
+**Afin de** gérer la banque globale de prompts et superviser le système
 
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné que je suis le créateur de l'app (identifié par email .env)
-Quand j'accède à l'interface d'admin
-Alors je vois tous les prompts globaux (tous statuts confondus)
-Et je peux filtrer par statut, type, tags
-Et je peux créer, éditer, approuver, rejeter, archiver
-Et je peux voir les statistiques d'usage dans les groupes
-Et je peux gérer les suggestions en attente
+Étant donné que je suis le créateur de l'app (identifié par APP_CREATOR_EMAIL dans .env)
+Quand je me connecte avec mon compte Google autorisé
+Alors j'accède à l'interface d'administration
+Et je vois un dashboard avec les métriques système
+Et j'ai accès aux sections : banque globale, suggestions, analytics, modération
+Et aucun autre utilisateur ne peut accéder à cette interface
 ```
 
 #### Règles métier
 
 - Accès exclusivement réservé au créateur de l'app
-- Aucun autre utilisateur ne peut parcourir la banque globale
-- Interface d'administration complète avec toutes les actions
+- Authentification via Google OAuth avec email vérifié
+- Interface séparée de l'expérience utilisateur standard
+- Logs d'accès pour traçabilité
 
 ---
 
-### E2 — Créer un prompt local original
+### E1.1 — Parcourir et gérer la banque globale (app creator)
+
+**En tant que** créateur de l'app  
+**Je veux** parcourir et gérer tous les prompts de la banque globale  
+**Afin de** maintenir un catalogue de qualité pour tous les groupes
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné que je suis dans l'interface d'admin
+Quand j'accède à la section "Banque globale"
+Alors je vois tous les prompts globaux (tous statuts confondus)
+Et je peux filtrer par statut, type, tags, date de création
+Et je peux créer, éditer, approuver, rejeter, archiver chaque prompt
+Et je peux voir les statistiques d'usage dans les groupes
+Et je peux prévisualiser chaque prompt avant publication
+```
+
+#### Règles métier
+
+- Vue complète de tous les prompts (pending, approved, rejected, archived)
+- Actions de modération : approve, reject, edit, archive
+- Statistiques d'engagement par prompt
+- Historique des modifications
+
+#### Cas limites
+
+- Prompt utilisé dans des rounds actifs ⇒ avertissement avant suppression
+- Modification d'un prompt approuvé ⇒ repasse en pending
+
+---
+
+### E2 — Parcourir et gérer la banque locale du groupe (owner/admin)
+
+**En tant que** owner/admin de groupe  
+**Je veux** accéder à l'interface de gestion des prompts locaux de mon groupe  
+**Afin de** voir, organiser et gérer tous les prompts disponibles pour mon groupe
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné que je suis owner/admin d'un groupe
+Quand j'accède à "Gestion des prompts locaux"
+Alors je vois tous les prompts locaux de mon groupe (actifs et inactifs)
+Et je peux filtrer par type, statut, date de création
+Et je peux activer/désactiver chaque prompt pour la sélection automatique
+Et je peux éditer, dupliquer ou supprimer les prompts locaux
+Et je vois les statistiques d'usage de chaque prompt dans mon groupe
+Et seuls les owners/admins du groupe ont accès à cette interface
+```
+
+#### Règles métier
+
+- Interface dédiée aux owners/admins du groupe uniquement
+- Vue complète des prompts locaux du groupe
+- Actions : créer, éditer, activer/désactiver, supprimer
+- Statistiques d'engagement locales au groupe
+- Aucun accès à la banque globale depuis cette interface
+
+---
+
+### E2.1 — Créer un prompt local original
 
 **En tant que** owner/admin de groupe  
 **Je veux** créer un prompt spécifique à mon groupe  
@@ -496,19 +558,19 @@ Et je peux gérer les suggestions en attente
 
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
-Quand je crée un nouveau prompt local depuis "Mes prompts locaux"
+Quand je crée un nouveau prompt local depuis "Gestion des prompts locaux"
 Alors il est ajouté à group_prompts avec cloned_from_global=NULL
-Et il est immédiatement actif pour mon groupe
+Et il est immédiatement actif (is_active=true) pour mon groupe
 Et je peux définir type, titre, corps, tags, métadonnées
 Et il n'apparaît que dans mon groupe (pas de modération globale)
-Et seuls les owners/admins peuvent le voir dans l'interface de gestion
+Et il devient disponible pour la sélection automatique quotidienne
 ```
 
 #### Règles métier
 
 - Création directe sans validation (liberté locale)
 - Visible uniquement dans le groupe créateur
-- Accès à l'interface de création restreint aux owners/admins
+- Activé par défaut à la création
 - Possibilité de suggestion vers banque globale plus tard
 
 ---
@@ -681,7 +743,7 @@ Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
 
 ## EPIC G — Soumissions
 
-> **Principe** : 1 soumission par user & par manche. Visibilité conditionnelle : toutes les soumissions sont masquées jusqu'à ce qu'on ait soumis sa propre réponse. Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
+> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
 
 ### G1 — Créer une soumission (1 par user)
 
@@ -693,15 +755,16 @@ Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
 
 ```gherkin
 Étant donné un round open
-Quand je poste
+Quand je poste ma soumission
 Alors submissions est créé avec (round_id, author_id) unique
-Et la soumission devient visible par les membres ayant déjà soumis leur réponse
+Et toutes les soumissions du round (y compris la mienne) deviennent visibles pour moi
+Et les autres membres ne verront ma soumission qu'après avoir soumis leur propre réponse
 Et je ne peux plus créer d'autre soumission pour ce round
 ```
 
 #### Règles métier
 
-- La soumission est visible uniquement par ceux ayant déjà participé (mode "blind" jusqu'à participation)
+- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse
 - Pas d'édition possible après création
 - Une seule soumission par utilisateur par round
 
