@@ -706,7 +706,7 @@ Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
 
 ## EPIC G — Soumissions
 
-> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
+> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. **Soumissions définitives** : pas d'édition ni suppression après création.
 
 ### G1 — Créer une soumission (1 par user)
 
@@ -728,28 +728,13 @@ Et je ne peux plus créer d'autre soumission pour ce round
 #### Règles métier
 
 - **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse
-- Pas d'édition possible après création
+- **Soumission définitive** : Pas d'édition ni suppression possible après création
 - Une seule soumission par utilisateur par round
 
 #### Cas limites
 
 - Tentative 2e soumission ⇒ rejet avec message explicite
 - Round fermé ⇒ création impossible
-
----
-
-### G2 — Supprimer ma soumission pendant la fenêtre
-
-**En tant que** membre  
-**Je veux** retirer ma réponse  
-**Afin de** la remplacer ou m'abstenir
-
-#### Critères d'acceptation
-
-```gherkin
-Quand je supprime avant close_at
-Alors la soumission est retirée, mon quota redevient disponible
-```
 
 ---
 
@@ -946,8 +931,7 @@ Et je peux interagir (commenter, voter si applicable)
 
 #### Cas limites
 
-- Suppression de sa soumission ⇒ les interactions redeviennent invisibles
-- Re-soumission après suppression ⇒ les interactions redeviennent visibles
+- Les soumissions sont définitives et ne peuvent pas être supprimées
 
 ---
 

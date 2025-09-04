@@ -113,8 +113,7 @@ graph LR
 
 ### 💬 Interactions sociales
 
-- **Soumissions** : Texte + médias, 1 par user/manche, visibles après avoir soumis sa propre réponse, pas d'édition
-- **Suppression** : Possible pendant la fenêtre ouverte (libère le quota pour re-soumission)
+- **Soumissions** : Texte + médias, 1 par user/manche, visibles après avoir soumis sa propre réponse, définitives (pas d'édition ni suppression)
 - **Commentaires** : Discussion globale sous chaque question du jour (visible après avoir soumis)
 - **Votes** : 1 vote par manche (type "vote" uniquement)
 - **Visibilité conditionnelle** : Soumissions, discussion et votes visibles uniquement après avoir soumis sa réponse
@@ -236,14 +235,14 @@ erDiagram
 
 #### 🎯 Règles de participation
 
-| Contrainte                        | Description                                  | Implémentation                                                    |
-| --------------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
-| **1 round/jour/groupe**           | Unicité quotidienne                          | `UNIQUE(group_id, scheduled_for)`                                 |
-| **1 soumission/user/round**       | Une participation par manche, pas d'édition  | `UNIQUE(round_id, author_id)`                                     |
-| **Suppression = nouvelle chance** | Supprimer libère le quota pour re-soumission | Suppression possible uniquement pendant round ouvert              |
-| **1 vote/user/round**             | Vote unique, pas d'auto-vote                 | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
-| **Visibilité conditionnelle**     | Soumissions visibles après participation     | Soumissions visibles après avoir soumis sa propre réponse         |
-| **Visibilité conditionnelle**     | Interactions après soumission                | Commentaires/votes visibles après avoir soumis sa réponse         |
+| Contrainte                    | Description                                 | Implémentation                                                    |
+| ----------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| **1 round/jour/groupe**       | Unicité quotidienne                         | `UNIQUE(group_id, scheduled_for)`                                 |
+| **1 soumission/user/round**   | Une participation par manche, pas d'édition | `UNIQUE(round_id, author_id)`                                     |
+| **Soumission définitive**     | Pas de suppression après création           | Soumission obligatoirement conservée une fois créée               |
+| **1 vote/user/round**         | Vote unique, pas d'auto-vote                | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
+| **Visibilité conditionnelle** | Soumissions visibles après participation    | Soumissions visibles après avoir soumis sa propre réponse         |
+| **Visibilité conditionnelle** | Interactions après soumission               | Commentaires/votes visibles après avoir soumis sa réponse         |
 
 #### 🔐 Règles de sécurité
 
