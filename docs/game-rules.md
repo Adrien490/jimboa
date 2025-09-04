@@ -8,8 +8,7 @@ graph LR
     B --> C[✍️ Participation]
     C --> D[💬 Interactions]
     D --> E[🗳️ Vote si applicable]
-    E --> F[⏰ Rappel]
-    F --> G[🔒 Fermeture]
+    E --> G[🔒 Fermeture]
     G --> H[📚 Archive consultable]
 ```
 
