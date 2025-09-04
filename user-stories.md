@@ -81,33 +81,6 @@ Alors updated_at est rafraîchi et le feed affiche le nouveau nom/avatar
 
 ---
 
-### A3 — Supprimer mon compte Google (droit à l'oubli)
-
-**En tant qu'** utilisateur connecté via Google  
-**Je veux** supprimer mon compte et mes données  
-**Afin de** retirer mes informations de l'application
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un utilisateur Google qui confirme la suppression
-Quand j'exécute "Supprimer mon compte"
-Alors le profil Supabase est supprimé/anonymisé, la session Google est révoquée et mes contributions suivent la politique définie (suppression ou anonymisation)
-```
-
-#### Règles métier
-
-- Si owner unique d'un groupe actif ⇒ blocage tant que la propriété n'est pas transférée ou le groupe supprimé
-- Révocation de l'accès Google OAuth pour l'application
-
-#### Cas limites
-
-- Contributions historiques conservées anonymisées si besoin (ex: "Utilisateur supprimé")
-- Échec de révocation Google ⇒ suppression locale quand même effectuée
-- Owner de plusieurs groupes ⇒ doit traiter chaque groupe individuellement
-
----
-
 ## EPIC B — Appareils & Notifications
 
 ### B1 — Enregistrer mon appareil pour le push
@@ -224,13 +197,11 @@ Même si le code correspond à groups.join_code
 
 - Code permanent sans expiration ni quota d'utilisation
 - Stockage direct en clair dans la base de données
-- Rate limiting : maximum 5 tentatives de join par IP/heure
 - Régénération invalide instantanément l'ancien code
 
 #### Cas limites
 
 - Code compromis ⇒ régénération immédiate recommandée
-- Tentatives multiples échouées ⇒ blocage temporaire IP
 
 ---
 
@@ -253,21 +224,18 @@ Et je reçois une confirmation de rejointe
 Étant donné un code invalide ou un groupe avec join_enabled=false
 Quand je tente de rejoindre
 Alors l'action échoue avec un message d'erreur générique
-Et la tentative est comptabilisée pour le rate limiting
 ```
 
 #### Règles métier
 
 - Vérification par comparaison directe du code
 - `join_enabled` doit être true pour accepter les invitations
-- Rate limiting : maximum 5 tentatives par IP/heure
 - Messages d'erreur génériques pour éviter l'énumération
 
 #### Cas limites
 
 - Déjà membre ⇒ message "déjà dans le groupe"
 - Code inexistant ⇒ même message que code invalide (sécurité)
-- Limite de tentatives atteinte ⇒ blocage temporaire avec message explicite
 - Groupe supprimé ⇒ code automatiquement invalide
 
 ---
@@ -287,35 +255,70 @@ Alors les tentatives de join par code échouent
 
 ---
 
-### C5 — Promouvoir/rétrograder un admin ou transférer la propriété
+### C5 — Promouvoir/rétrograder un admin
 
 **En tant qu'** owner unique  
-**Je veux** gérer les admins ou transférer la propriété  
-**Afin de** déléguer ou changer de propriétaire
+**Je veux** gérer les rôles admin  
+**Afin de** déléguer des responsabilités
 
 #### Critères d'acceptation
 
 ```gherkin
 Étant donné un membre M
 Quand je le promeus admin
-Alors role='admin'
+Alors role='admin' dans group_members
 
 Quand je rétrograde un admin
-Alors role='member'
-
-Quand je transfère la propriété à un membre/admin
-Alors son role='owner' et mon role='admin' (ou 'member' selon choix)
+Alors role='member' dans group_members
 ```
 
 #### Règles métier
 
-- Un groupe doit avoir exactement 1 owner
-- Le transfert de propriété est irréversible (sauf nouveau transfert par le nouveau owner)
+- Seul l'owner peut promouvoir/rétrograder des admins
+- Un groupe peut avoir plusieurs admins
 
 #### Cas limites
 
-- Impossible de se rétrograder soi-même en tant qu'owner sans transférer la propriété
-- Le nouveau owner doit accepter le transfert
+- Impossible de se rétrograder soi-même en tant qu'owner
+
+---
+
+### C5.1 — Transférer la propriété (avec acceptation)
+
+**En tant qu'** owner unique  
+**Je veux** transférer la propriété avec acceptation du nouveau owner  
+**Afin de** changer de propriétaire de manière sécurisée
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné que je suis owner d'un groupe
+Quand je propose le transfert de propriété à un membre/admin
+Alors une entrée group_ownership_transfers est créée avec status='pending'
+Et le destinataire reçoit une notification de demande de transfert
+
+Quand le destinataire accepte le transfert
+Alors son role devient 'owner' dans group_members
+Et mon role devient 'admin' (ou 'member' selon choix)
+Et group_ownership_transfers.status devient 'accepted'
+
+Quand le destinataire refuse le transfert
+Alors group_ownership_transfers.status devient 'rejected'
+Et aucun changement de propriété n'a lieu
+```
+
+#### Règles métier
+
+- **Acceptation obligatoire** : Le nouveau owner doit accepter le transfert
+- **Un groupe doit avoir exactement 1 owner** à tout moment
+- **Le transfert est irréversible** une fois accepté
+- **Annulation possible** tant que status='pending'
+
+#### Cas limites
+
+- Transfert en attente ⇒ impossible de faire un nouveau transfert
+- Destinataire supprime son compte ⇒ transfert automatiquement rejeté
+- Owner annule sa demande ⇒ status devient 'rejected'
 
 ---
 
@@ -332,12 +335,12 @@ Quand je quitte en tant que membre ou admin
 Alors group_members me supprime
 
 Si je suis l'owner unique
-Alors quitter est bloqué jusqu'à ce que je transfère la propriété ou supprime le groupe
+Alors quitter est bloqué jusqu'à ce que je transfère la propriété (avec acceptation) ou supprime le groupe
 ```
 
 #### Règles métier
 
-- L'owner ne peut pas quitter sans transférer la propriété
+- L'owner ne peut pas quitter sans transférer la propriété (avec acceptation)
 - Alternative : l'owner peut supprimer le groupe entier
 
 ---
@@ -396,22 +399,34 @@ Et l'image est supprimée du storage
 ```gherkin
 Étant donné que je suis l'owner unique du groupe
 Quand je confirme la suppression du groupe
-Alors le groupe, tous ses rounds, soumissions, commentaires et données associées sont supprimés définitivement
-Et tous les membres sont automatiquement retirés du groupe
-Et l'image de profil du groupe est supprimée du storage
+Alors le groupe est supprimé avec ON DELETE CASCADE sur toutes les FK
+Et toutes les données liées sont automatiquement supprimées :
+  - group_members (membres)
+  - group_settings (paramètres)
+  - daily_rounds (manches) → et leurs FK (submissions, comments, votes, reactions)
+  - group_prompts (prompts locaux)
+  - group_prompt_suggestions (suggestions locales)
+  - group_ownership_transfers (transferts)
+  - user_group_prefs (préférences utilisateurs)
+  - notifications (notifications liées au groupe)
+Et les fichiers Storage sont supprimés en arrière-plan (images, médias)
 ```
 
 #### Règles métier
 
-- Seul l'owner peut supprimer le groupe
-- Action irréversible avec confirmation obligatoire
-- Suppression en cascade de toutes les données liées (y compris l'image)
+- **Seul l'owner** peut supprimer le groupe
+- **Action irréversible** avec confirmation obligatoire (double confirmation recommandée)
+- **ON DELETE CASCADE** : Toutes les FK vers `groups.id` configurées avec CASCADE
+- **Suppression transitive** : Les manches supprimées entraînent la suppression de leurs soumissions, commentaires, votes, etc.
+- **Storage asynchrone** : Suppression des fichiers en arrière-plan pour éviter les timeouts
 
 #### Cas limites
 
-- Rounds actifs en cours ⇒ avertissement mais suppression autorisée
-- Notification aux membres avant suppression (optionnel)
-- Échec de suppression de l'image ⇒ continuer la suppression du groupe
+- **Rounds actifs en cours** ⇒ avertissement mais suppression autorisée
+- **Notification aux membres** avant suppression (optionnel)
+- **Échec suppression Storage** ⇒ continuer la suppression du groupe, retry en arrière-plan
+- **Transferts en attente** ⇒ automatiquement rejetés lors de la suppression
+- **Suggestions vers global** ⇒ conservées avec référence au groupe supprimé (historique)
 
 ---
 
@@ -757,12 +772,50 @@ Et je ne peux plus créer d'autre soumission pour ce round
 
 - **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse
 - **Soumission définitive** : Pas d'édition ni suppression possible après création
-- Une seule soumission par utilisateur par round
+- **Une seule soumission** par utilisateur par round : `UNIQUE(round_id, author_id)`
+- **Implémentation RLS** : Row Level Security Supabase pour gating automatique
 
 #### Cas limites
 
 - Tentative 2e soumission ⇒ rejet avec message explicite
 - Round fermé ⇒ création impossible
+
+---
+
+### G1.1 — Implémenter la visibilité conditionnelle via RLS
+
+**En tant que** système  
+**Je veux** utiliser Row Level Security pour contrôler la visibilité des interactions  
+**Afin d'** automatiser le gating "je ne vois rien tant que je n'ai pas soumis"
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un utilisateur qui n'a pas encore soumis dans un round ouvert
+Quand il tente de consulter les soumissions/commentaires/votes/réactions
+Alors les requêtes SELECT retournent des résultats vides (RLS bloque)
+
+Étant donné un utilisateur qui a soumis dans un round ouvert
+Quand il consulte les interactions du round
+Alors il voit toutes les soumissions, commentaires, votes et réactions
+
+Étant donné un round fermé (status='closed')
+Quand n'importe quel membre du groupe consulte les interactions
+Alors tout est visible (pas de restriction RLS)
+```
+
+#### Règles métier
+
+- **RLS activé** sur `submissions`, `comments`, `reactions`, `round_votes`
+- **Condition de visibilité** : `round.status='closed'` OU `EXISTS(ma_soumission_dans_ce_round)`
+- **Performances** : Index sur `(round_id, author_id)` pour les requêtes RLS
+- **Cohérence** : Même logique RLS pour toutes les tables d'interactions
+
+#### Cas limites
+
+- **Pas de soumission** dans le round ⇒ aucune interaction visible
+- **Round fermé** ⇒ tout devient visible immédiatement
+- **Suppression de ma soumission** ⇒ les interactions redeviennent invisibles (si implémentée)
 
 ---
 
@@ -856,13 +909,58 @@ Alors updated_at est mis à jour et le commentaire modifié apparaît dans la di
 Quand je supprime mon commentaire avant fermeture du round
 Alors le commentaire disparaît de la discussion globale
 Et les autres membres ne le voient plus
+
+Étant donné un commentaire sur un round fermé (status='closed')
+Quand je tente d'éditer ou supprimer le commentaire
+Alors l'opération échoue avec "Cannot modify comments after round is closed"
+Et le trigger DB bloque la modification/suppression
 ```
 
 #### Règles métier
 
-- Modification/suppression impossible après fermeture du round
-- Seul l'auteur peut éditer/supprimer son commentaire
-- Les commentaires restent dans l'ordre chronologique après édition
+- **Contrôle temporel DB** : Triggers `BEFORE UPDATE/DELETE` sur `comments` vérifient `daily_rounds.status != 'closed'`
+- **Seul l'auteur** peut éditer/supprimer son commentaire (contrôle applicatif + RLS)
+- **Ordre chronologique** préservé après édition
+- **Intégrité garantie** : Impossible de contourner la restriction côté client
+
+---
+
+### I2.1 — Implémenter les triggers de contrôle temporel
+
+**En tant que** système  
+**Je veux** utiliser des triggers DB pour empêcher la modification des commentaires après fermeture  
+**Afin de** garantir l'intégrité temporelle au niveau base de données
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un trigger BEFORE UPDATE sur comments
+Quand une tentative d'UPDATE est faite sur un commentaire d'un round fermé
+Alors le trigger lève une exception "Cannot modify comments after round is closed"
+Et la transaction est annulée
+
+Étant donné un trigger BEFORE DELETE sur comments
+Quand une tentative de DELETE est faite sur un commentaire d'un round fermé
+Alors le trigger lève une exception "Cannot modify comments after round is closed"
+Et la suppression est bloquée
+
+Étant donné un round ouvert (status='open' ou 'scheduled')
+Quand je modifie ou supprime un commentaire
+Alors l'opération réussit normalement (trigger OK)
+```
+
+#### Règles métier
+
+- **Fonction trigger** : `check_round_not_closed()` réutilisable
+- **Vérification** : `daily_rounds.status = 'closed'` pour le round du commentaire
+- **Exception SQL** : Message d'erreur explicite pour l'application
+- **Performance** : Index sur `daily_rounds(id, status)` pour les triggers
+
+#### Cas limites
+
+- **Round en transition** : Si le round passe à 'closed' pendant l'édition, le trigger bloque
+- **Commentaire orphelin** : Si `round_id` invalide, laisser l'opération échouer sur FK
+- **Transactions simultanées** : Le trigger est thread-safe (isolation SQL)
 
 ---
 
@@ -882,21 +980,80 @@ Et les autres membres ne le voient plus
 Étant donné un round open de type vote
 Quand je vote {target_user_id, reason?}
 Alors round_votes (round_id, voter_id) est créé avec UNIQUE
+Et le trigger vérifie que target_user_id appartient au groupe
 Et je ne peux plus voter ni modifier mon vote pour ce round
 Et target_user_id peut être égal à voter_id (auto-vote autorisé)
+
+Étant donné un vote existant
+Quand je tente de modifier ou supprimer mon vote
+Alors l'opération échoue avec "Votes are definitive and cannot be modified or deleted"
+Et le trigger DB bloque UPDATE/DELETE
+
+Étant donné un target_user_id qui n'appartient pas au groupe
+Quand je tente de voter pour cet utilisateur
+Alors l'opération échoue avec "Target user must be an active member of the round group"
+Et le trigger d'intégrité bloque l'insertion
 ```
 
 #### Règles métier
 
-- **Vote définitif** : Impossible de modifier ou supprimer son vote
+- **Intégrité DB** : Trigger `BEFORE INSERT` vérifie `target_user_id ∈ group_members(active)`
+- **Vote définitif** : Triggers `BEFORE UPDATE/DELETE` bloquent toute modification
 - **Auto-vote autorisé** : `voter_id` peut être égal à `target_user_id`
-- **Un seul vote** par utilisateur par manche
+- **Un seul vote** : Contrainte `UNIQUE(round_id, voter_id)`
+- **Performance** : Index sur `group_members(group_id, user_id, status)` pour triggers
 
 #### Cas limites
 
-- Tentative de second vote ⇒ refus avec message explicite
-- Auto-vote autorisé (voter pour soi-même)
-- Non-membre ⇒ refus
+- **Tentative de second vote** ⇒ Erreur UNIQUE constraint
+- **Auto-vote autorisé** (voter pour soi-même)
+- **Non-membre comme target** ⇒ Trigger d'intégrité bloque
+- **Modification impossible** ⇒ Trigger définitif bloque
+
+---
+
+### K1.1 — Implémenter les triggers de contrôle des votes
+
+**En tant que** système  
+**Je veux** utiliser des triggers DB pour garantir l'intégrité et le caractère définitif des votes  
+**Afin d'** empêcher les votes invalides et les modifications a posteriori
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un trigger BEFORE INSERT sur round_votes
+Quand une insertion est tentée avec target_user_id hors du groupe
+Alors le trigger lève "Target user must be an active member of the round group"
+Et l'insertion est bloquée
+
+Étant donné un trigger BEFORE UPDATE sur round_votes
+Quand une tentative de modification d'un vote existant est faite
+Alors le trigger lève "Votes are definitive and cannot be modified or deleted"
+Et la modification est bloquée
+
+Étant donné un trigger BEFORE DELETE sur round_votes
+Quand une tentative de suppression d'un vote est faite
+Alors le trigger lève "Votes are definitive and cannot be modified or deleted"
+Et la suppression est bloquée
+
+Étant donné un target_user_id appartenant au groupe (status='active')
+Quand j'insère un vote valide
+Alors l'opération réussit normalement (trigger d'intégrité OK)
+```
+
+#### Règles métier
+
+- **Fonction d'intégrité** : `check_vote_integrity()` vérifie l'appartenance au groupe
+- **Fonction définitive** : `prevent_vote_modification()` bloque UPDATE/DELETE
+- **Jointure performante** : `daily_rounds ⋈ group_members` pour validation
+- **Statut actif** : Seuls les membres `status='active'` sont des targets valides
+
+#### Cas limites
+
+- **Membre inactif comme target** : Le trigger bloque (seuls les actifs acceptés)
+- **Round invalide** : FK constraint échoue avant le trigger
+- **Votes simultanés** : UNIQUE constraint + triggers thread-safe
+- **Performance** : Index recommandé sur `group_members(group_id, user_id, status)`
 
 ---
 

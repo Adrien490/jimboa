@@ -169,6 +169,9 @@ erDiagram
     groups ||--o{ user_group_prefs : "pour groupe"
     profiles ||--o{ notifications : "destinataire"
     groups ||--o{ notifications : "contexte"
+    groups ||--o{ group_ownership_transfers : "transferts de propriété"
+    profiles ||--o{ group_ownership_transfers : "from_user_id (initiateur)"
+    profiles ||--o{ group_ownership_transfers : "to_user_id (destinataire)"
 ```
 
 ### 📊 Dictionnaire des tables (v1)
@@ -204,11 +207,12 @@ erDiagram
 
 #### 🔔 Notifications & Préférences
 
-| Table                | Champs principaux                                                        | Contraintes & remarques                                                      |
-| -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **notifications**    | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`… ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`) |
-| **user_devices**     | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `created_at`   | **UNIQUE(token)** ; 1 token ne peut appartenir qu'à un seul compte           |
-| **user_group_prefs** | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                         |
+| Table                         | Champs principaux                                                        | Contraintes & remarques                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **notifications**             | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`… ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`)            |
+| **user_devices**              | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `created_at`   | **UNIQUE(token)** ; 1 token ne peut appartenir qu'à un seul compte                      |
+| **user_group_prefs**          | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                                    |
+| **group_ownership_transfers** | `group_id`, `from_user_id`, `to_user_id`, `status`, `created_at`         | Transferts de propriété avec acceptation ; `status` (`pending`\|`accepted`\|`rejected`) |
 
 #### 🏷️ Tagging
 
@@ -225,7 +229,6 @@ erDiagram
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
 - **Réactions typées uniques** : `UNIQUE(entity_type, entity_id, user_id, type)`
 - **Sélection quotidienne v1** : prompts **locaux** avec `is_active=true` ; exclusion des `N` derniers prompts utilisés par le groupe (fenêtre glissante)
-- **Droit à l'oubli** : contributions conservées **anonymisées** (remplacement par "Utilisateur supprimé" au niveau applicatif)
 
 ### 🔐 Règles de sécurité
 
@@ -233,6 +236,212 @@ erDiagram
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Fuseau horaire** : Défini à la création (non modifiable), planification locale, stockage UTC
 - **Prompts éligibles v1** : **seulement** `group_prompts.is_active=true`
+
+### 🔒 Row Level Security (RLS) - Visibilité conditionnelle
+
+**Principe** : Les interactions d'une manche ne sont visibles qu'après avoir soumis sa propre réponse.
+
+#### Politique RLS pour `submissions`
+
+```sql
+-- SELECT autorisé si round fermé OU si j'ai déjà soumis
+CREATE POLICY "submissions_visibility" ON submissions FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    WHERE dr.id = submissions.round_id
+    AND dr.status = 'closed'
+  )
+  OR EXISTS (
+    SELECT 1 FROM submissions s2
+    WHERE s2.round_id = submissions.round_id
+    AND s2.author_id = auth.uid()
+  )
+);
+```
+
+#### Politique RLS pour `comments`
+
+```sql
+-- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
+CREATE POLICY "comments_visibility" ON comments FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    WHERE dr.id = comments.round_id
+    AND dr.status = 'closed'
+  )
+  OR EXISTS (
+    SELECT 1 FROM submissions s
+    WHERE s.round_id = comments.round_id
+    AND s.author_id = auth.uid()
+  )
+);
+```
+
+#### Politique RLS pour `reactions`
+
+```sql
+-- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
+CREATE POLICY "reactions_visibility" ON reactions FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    JOIN submissions sub ON sub.round_id = dr.id
+    WHERE (
+      (reactions.entity_type = 'submission' AND reactions.entity_id = sub.id)
+      OR (reactions.entity_type = 'comment' AND EXISTS (
+        SELECT 1 FROM comments c WHERE c.id = reactions.entity_id AND c.round_id = dr.id
+      ))
+    )
+    AND dr.status = 'closed'
+  )
+  OR EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    JOIN submissions sub ON sub.round_id = dr.id
+    JOIN submissions my_sub ON my_sub.round_id = dr.id AND my_sub.author_id = auth.uid()
+    WHERE (
+      (reactions.entity_type = 'submission' AND reactions.entity_id = sub.id)
+      OR (reactions.entity_type = 'comment' AND EXISTS (
+        SELECT 1 FROM comments c WHERE c.id = reactions.entity_id AND c.round_id = dr.id
+      ))
+    )
+  )
+);
+```
+
+#### Politique RLS pour `round_votes`
+
+```sql
+-- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
+CREATE POLICY "votes_visibility" ON round_votes FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    WHERE dr.id = round_votes.round_id
+    AND dr.status = 'closed'
+  )
+  OR EXISTS (
+    SELECT 1 FROM submissions s
+    WHERE s.round_id = round_votes.round_id
+    AND s.author_id = auth.uid()
+  )
+);
+```
+
+### 🔐 Triggers de contrôle temporel
+
+**Objectif** : Empêcher l'édition/suppression des commentaires après fermeture du round.
+
+#### Trigger pour `comments`
+
+```sql
+-- Fonction de validation
+CREATE OR REPLACE FUNCTION check_round_not_closed()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Vérifier si le round est fermé
+  IF EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    WHERE dr.id = COALESCE(NEW.round_id, OLD.round_id)
+    AND dr.status = 'closed'
+  ) THEN
+    RAISE EXCEPTION 'Cannot modify comments after round is closed';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger BEFORE UPDATE sur comments
+CREATE TRIGGER comments_update_check
+  BEFORE UPDATE ON comments
+  FOR EACH ROW
+  EXECUTE FUNCTION check_round_not_closed();
+
+-- Trigger BEFORE DELETE sur comments
+CREATE TRIGGER comments_delete_check
+  BEFORE DELETE ON comments
+  FOR EACH ROW
+  EXECUTE FUNCTION check_round_not_closed();
+```
+
+#### Triggers pour `round_votes` (votes définitifs + intégrité)
+
+```sql
+-- Fonction de validation pour l'appartenance au groupe
+CREATE OR REPLACE FUNCTION check_vote_integrity()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Vérifier que target_user_id appartient au même groupe que le round
+  IF NOT EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    JOIN group_members gm ON gm.group_id = dr.group_id
+    WHERE dr.id = NEW.round_id
+    AND gm.user_id = NEW.target_user_id
+    AND gm.status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'Target user must be an active member of the round group';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fonction pour bloquer modification des votes
+CREATE OR REPLACE FUNCTION prevent_vote_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'Votes are definitive and cannot be modified or deleted';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger BEFORE INSERT pour vérifier l'intégrité
+CREATE TRIGGER round_votes_integrity_check
+  BEFORE INSERT ON round_votes
+  FOR EACH ROW
+  EXECUTE FUNCTION check_vote_integrity();
+
+-- Triggers BEFORE UPDATE/DELETE pour empêcher modification
+CREATE TRIGGER round_votes_prevent_update
+  BEFORE UPDATE ON round_votes
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_vote_modification();
+
+CREATE TRIGGER round_votes_prevent_delete
+  BEFORE DELETE ON round_votes
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_vote_modification();
+```
+
+#### Extension possible pour `reactions`
+
+```sql
+-- Trigger similaire pour reactions (si édition/suppression autorisée)
+CREATE TRIGGER reactions_update_check
+  BEFORE UPDATE ON reactions
+  FOR EACH ROW
+  EXECUTE FUNCTION check_round_not_closed_for_reactions();
+
+CREATE TRIGGER reactions_delete_check
+  BEFORE DELETE ON reactions
+  FOR EACH ROW
+  EXECUTE FUNCTION check_round_not_closed_for_reactions();
+```
+
+### 🗑️ Suppression en cascade
+
+- **ON DELETE CASCADE** activé sur toutes les FK vers `groups.id` :
+  - `group_members.group_id` → suppression des membres
+  - `group_settings.group_id` → suppression des paramètres
+  - `daily_rounds.group_id` → suppression des manches
+  - `group_prompts.group_id` → suppression des prompts locaux
+  - `group_prompt_suggestions.group_id` → suppression des suggestions locales
+  - `group_ownership_transfers.group_id` → suppression des transferts
+  - `user_group_prefs.group_id` → suppression des préférences
+  - `notifications.group_id` → suppression des notifications
+- **Suppression Storage asynchrone** : Images de groupe et médias associés supprimés en arrière-plan
+- **Suppression transitive** : Les FK des tables liées aux manches sont aussi supprimées (submissions, comments, votes, reactions, etc.)
 
 ## 🔔 Notifications & Préférences
 
@@ -322,7 +531,7 @@ SET status = 'open',
     updated_at = NOW()
 FROM groups g
 JOIN group_settings gs ON gs.group_id = g.id
-WHERE dr.group_id = g.id
+    WHERE dr.group_id = g.id
   AND dr.status = 'scheduled'
   AND (
     -- calcul "il est l'heure" dans le fuseau du groupe
