@@ -109,11 +109,11 @@ graph LR
 
 ### 💬 Interactions sociales
 
-- **Soumissions** : Texte + médias, 1 par user/manche, visibilité immédiate, pas d'édition
+- **Soumissions** : Texte + médias, 1 par user/manche, visibles uniquement après avoir soumis, pas d'édition
 - **Suppression** : Possible pendant la fenêtre ouverte (libère le quota pour re-soumission)
-- **Commentaires** : Discussion globale sous chaque question du jour
+- **Commentaires** : Discussion globale sous chaque question du jour (visible après avoir soumis)
 - **Votes** : 1 vote par manche (type "vote" uniquement)
-- **Visibilité conditionnelle** : Interactions visibles uniquement après avoir soumis sa réponse
+- **Visibilité conditionnelle** : Soumissions, discussion et votes visibles uniquement après avoir soumis sa réponse
 
 ### 🔔 Notifications intelligentes
 
@@ -261,12 +261,10 @@ erDiagram
 
 ### 📨 Types de notifications
 
-| Type                 | Trigger                    | Timing                    |
-| -------------------- | -------------------------- | ------------------------- |
-| **round_open**       | Ouverture de manche        | À `open_at`               |
-| **round_close_soon** | Rappel avant fermeture     | À `close_at - Δ` (ex: 1h) |
-| **mention**          | Mention dans commentaire   | Temps réel                |
-| **comment**          | Commentaire sur soumission | Temps réel                |
+| Type                 | Trigger                | Timing                    |
+| -------------------- | ---------------------- | ------------------------- |
+| **round_open**       | Ouverture de manche    | À `open_at`               |
+| **round_close_soon** | Rappel avant fermeture | À `close_at - Δ` (ex: 1h) |
 
 ### ⚙️ Système de préférences
 
@@ -416,6 +414,8 @@ flowchart LR
 
 ### 🏠 Écran principal "Aujourd'hui"
 
+#### **Avant de soumettre sa réponse :**
+
 ```
 ┌────────────────────────────────────────┐
 │  🎯 PROMPT DU JOUR                    │
@@ -423,11 +423,31 @@ flowchart LR
 │                                        │
 │  [ ✍️ Répondre ]     ⏰ Ferme à 20h00     │
 ├────────────────────────────────────────┤
+│  🔒 Contenu masqué                     │
+│                                        │
+│  Soumettez votre réponse pour voir :   │
+│  • Les réponses des autres membres     │
+│  • La discussion du groupe             │
+│  • Les votes (si applicable)           │
+│                                        │
+│  👥 3 membres ont déjà participé        │
+└────────────────────────────────────────┘
+```
+
+#### **Après avoir soumis sa réponse :**
+
+```
+┌────────────────────────────────────────┐
+│  🎯 PROMPT DU JOUR                    │
+│  "Quel est votre super-pouvoir rêvé?"   │
+│                                        │
+│  ✅ Votre réponse: "Téléportation!"     │
+├────────────────────────────────────────┤
 │  📝 SOUMISSIONS (temps réel)           │
 │                                        │
 │  👤 Alice: "Lire dans les pensées!"    │
 │  👤 Bob: "Voler comme Superman"       │
-│  👤 Charlie: "Téléportation!"         │
+│  👤 Vous: "Téléportation!"            │
 ├────────────────────────────────────────┤
 │  🗳️ VOTES (si applicable)              │
 │  👤 Alice: 2 votes                    │

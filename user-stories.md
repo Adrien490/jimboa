@@ -19,7 +19,6 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 - [EPIC N — Fuseaux horaires & Planificateur](#epic-n--fuseaux-horaires--planificateur)
 - [EPIC O — Feed & Navigation](#epic-o--feed--navigation)
 - [EPIC P — Actions d'admin simples](#epic-p--actions-dadmin-simples-sans-système-de-modération-dédié)
-- [EPIC Q — Notifications sociales (facultatives)](#epic-q--notifications-sociales-facultatives)
 - [EPIC R — Confidentialité & Données](#epic-r--confidentialité--données)
 - [EPIC S — Résilience & Erreurs](#epic-s--résilience--erreurs)
 - [Notes de conception transverses](#notes-de-conception-transverses)
@@ -654,7 +653,7 @@ Alors status='closed'
 
 ## EPIC G — Soumissions
 
-> **Principe** : 1 soumission par user & par manche (visible immédiate). Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
+> **Principe** : 1 soumission par user & par manche. Visibilité conditionnelle : toutes les soumissions sont masquées jusqu'à ce qu'on ait soumis sa propre réponse. Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
 
 ### G1 — Créer une soumission (1 par user)
 
@@ -668,13 +667,13 @@ Alors status='closed'
 Étant donné un round open
 Quand je poste
 Alors submissions est créé avec (round_id, author_id) unique
-Et la soumission est visible immédiatement par tous les membres du groupe
+Et la soumission devient visible par les membres ayant déjà soumis leur réponse
 Et je ne peux plus créer d'autre soumission pour ce round
 ```
 
 #### Règles métier
 
-- La soumission est visible immédiatement (pas de mode "blind")
+- La soumission est visible uniquement par ceux ayant déjà participé (mode "blind" jusqu'à participation)
 - Pas d'édition possible après création
 - Une seule soumission par utilisateur par round
 
@@ -742,7 +741,7 @@ Alors les médias s'affichent avec lecteurs/miniatures adaptés
 
 ## EPIC I — Commentaires
 
-> **Principe** : Discussion globale sous chaque question du jour. Les commentaires sont liés au round (question) et non aux soumissions individuelles. Tous les membres peuvent participer à la discussion commune.
+> **Principe** : Tout le contenu du round (soumissions, discussion, votes) est visible uniquement après avoir soumis sa propre réponse. Les commentaires sont liés au round (question) et non aux soumissions individuelles. Chaque utilisateur accède au contenu complet individuellement après sa participation.
 
 ### I1 — Commenter sur la question du jour
 
@@ -757,20 +756,20 @@ Alors les médias s'affichent avec lecteurs/miniatures adaptés
 Quand je publie un commentaire sur la question du jour
 Alors comments {round_id, author_id, body} est créé
 Et le commentaire apparaît dans la discussion globale sous la question
-Et tous les membres du groupe peuvent le voir
+Et tous les membres ayant soumis leur réponse peuvent le voir
 ```
 
 #### Règles métier
 
-- Commentaires visibles uniquement après avoir soumis sa propre réponse
-- Discussion globale commune à tous les membres
-- Visible immédiatement après publication
+- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit la discussion uniquement après avoir soumis sa propre réponse
+- Discussion globale commune à tous les membres ayant participé
+- Commentaires visibles immédiatement après publication (pour ceux qui ont soumis)
 - Ordre chronologique d'affichage
 
 #### Cas limites
 
 - Non-membre du groupe ⇒ refus
-- Pas encore soumis de réponse ⇒ commentaires masqués
+- Pas encore soumis de réponse ⇒ discussion globale masquée
 
 ---
 
@@ -1075,56 +1074,9 @@ Alors le commentaire disparaît
 
 ---
 
-## EPIC Q — Notifications sociales (facultatives)
-
-### Q1 — Notifier les mentions
-
-**En tant que** membre  
-**Je veux** être notifié si on me mentionne  
-**Afin de** réagir vite
-
-#### Critères d'acceptation
-
-```gherkin
-Quand un commentaire contient @display_name
-Alors envoyer une notif "mention" à l'utilisateur ciblé (si ses prefs le permettent)
-```
-
----
-
-### Q2 — Notifier commentaires sur mon post
-
-**En tant qu'** auteur  
-**Je veux** être notifié des commentaires  
-**Afin de** suivre l'engagement
-
-#### Critères d'acceptation
-
-```gherkin
-Quand quelqu'un commente ma soumission
-Alors je reçois une notif (opt-in par prefs)
-```
-
----
-
 ## EPIC R — Confidentialité & Données
 
-### R1 — Exporter mes données
-
-**En tant qu'** utilisateur  
-**Je veux** télécharger mes données  
-**Afin de** les conserver
-
-#### Critères d'acceptation
-
-```gherkin
-Quand je demande un export
-Alors profil, appartenance aux groupes, soumissions/commentaires/votes me concernant sont rassemblés
-```
-
----
-
-### R2 — Quitter un groupe et couper les notifs
+### R1 — Quitter un groupe et couper les notifs
 
 **En tant qu'** utilisateur  
 **Je veux** ne plus recevoir de push d'un groupe quitté  
