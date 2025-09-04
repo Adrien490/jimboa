@@ -111,338 +111,35 @@ erDiagram
 
 **Principe** : Les interactions d'une manche ne sont visibles qu'après avoir soumis sa propre réponse.
 
-### Politique RLS pour `submissions`
+### Politiques de visibilité
 
-```sql
--- SELECT autorisé si round fermé OU si j'ai déjà soumis
-CREATE POLICY "submissions_visibility" ON submissions FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.id = submissions.round_id
-    AND dr.status = 'closed'
-  )
-  OR EXISTS (
-    SELECT 1 FROM submissions s2
-    WHERE s2.round_id = submissions.round_id
-    AND s2.author_id = auth.uid()
-  )
-);
-```
+- **`submissions`** : Visibles si le round est fermé OU si l'utilisateur a déjà soumis sa réponse
+- **`comments`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
+- **`reactions`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
+- **`round_votes`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
 
-### Politique RLS pour `comments`
+### Mécanisme de gamification
 
-```sql
--- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
-CREATE POLICY "comments_visibility" ON comments FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.id = comments.round_id
-    AND dr.status = 'closed'
-  )
-  OR EXISTS (
-    SELECT 1 FROM submissions s
-    WHERE s.round_id = comments.round_id
-    AND s.author_id = auth.uid()
-  )
-);
-```
+Cette approche crée un **effet de mystère** qui encourage la participation :
 
-### Politique RLS pour `reactions`
-
-```sql
--- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
-CREATE POLICY "reactions_visibility" ON reactions FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN submissions sub ON sub.round_id = dr.id
-    WHERE (
-      (reactions.entity_type = 'submission' AND reactions.entity_id = sub.id)
-      OR (reactions.entity_type = 'comment' AND EXISTS (
-        SELECT 1 FROM comments c WHERE c.id = reactions.entity_id AND c.round_id = dr.id
-      ))
-    )
-    AND dr.status = 'closed'
-  )
-  OR EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN submissions sub ON sub.round_id = dr.id
-    JOIN submissions my_sub ON my_sub.round_id = dr.id AND my_sub.author_id = auth.uid()
-    WHERE (
-      (reactions.entity_type = 'submission' AND reactions.entity_id = sub.id)
-      OR (reactions.entity_type = 'comment' AND EXISTS (
-        SELECT 1 FROM comments c WHERE c.id = reactions.entity_id AND c.round_id = dr.id
-      ))
-    )
-  )
-);
-```
-
-### Politique RLS pour `round_votes`
-
-```sql
--- SELECT autorisé si round fermé OU si j'ai soumis dans ce round
-CREATE POLICY "votes_visibility" ON round_votes FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.id = round_votes.round_id
-    AND dr.status = 'closed'
-  )
-  OR EXISTS (
-    SELECT 1 FROM submissions s
-    WHERE s.round_id = round_votes.round_id
-    AND s.author_id = auth.uid()
-  )
-);
-```
+1. L'utilisateur voit le prompt mais pas les réponses des autres
+2. Il doit soumettre sa propre réponse pour débloquer le contenu
+3. Une fois sa réponse soumise, tout devient visible en temps réel
+4. Après fermeture du round, tout reste consultable par tous les membres
 
 ## 🔐 Triggers de contrôle temporel
 
 **Objectif** : Empêcher l'édition/suppression des commentaires après fermeture du round.
 **Exception** : Les admins/owners peuvent effectuer un soft delete pour modération.
 
-### Trigger pour `comments`
+### Triggers implémentés
 
-```sql
--- Fonction de validation avec exception admin
-CREATE OR REPLACE FUNCTION check_round_not_closed_or_admin()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Vérifier si le round est fermé
-  IF EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.id = COALESCE(NEW.round_id, OLD.round_id)
-    AND dr.status = 'closed'
-  ) THEN
-    -- Exception pour soft delete admin (UPDATE avec deleted_by_admin)
-    IF TG_OP = 'UPDATE' AND NEW.deleted_by_admin IS NOT NULL AND OLD.deleted_by_admin IS NULL THEN
-      -- Vérifier que l'utilisateur est admin/owner du groupe
-      IF EXISTS (
-        SELECT 1 FROM daily_rounds dr
-        JOIN group_members gm ON gm.group_id = dr.group_id
-        WHERE dr.id = NEW.round_id
-        AND gm.user_id = auth.uid()
-        AND gm.role IN ('owner', 'admin')
-        AND gm.status = 'active'
-      ) THEN
-        RETURN NEW; -- Autoriser soft delete admin
-      END IF;
-    END IF;
-
-    RAISE EXCEPTION 'Cannot modify comments after round is closed (except admin soft delete)';
-  END IF;
-
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger BEFORE UPDATE sur comments (avec exception admin)
-CREATE TRIGGER comments_update_check
-  BEFORE UPDATE ON comments
-  FOR EACH ROW
-  EXECUTE FUNCTION check_round_not_closed_or_admin();
-
--- Trigger BEFORE DELETE sur comments (hard delete interdit après fermeture)
-CREATE TRIGGER comments_delete_check
-  BEFORE DELETE ON comments
-  FOR EACH ROW
-  EXECUTE FUNCTION check_round_not_closed();
-```
-
-### Triggers pour `round_votes` (votes définitifs + intégrité)
-
-```sql
--- Fonction de validation complète pour les votes
-CREATE OR REPLACE FUNCTION check_vote_integrity()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Vérifier que le round est ouvert
-  IF NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.id = NEW.round_id
-    AND dr.status = 'open'
-  ) THEN
-    RAISE EXCEPTION 'Can only vote on open rounds';
-  END IF;
-
-  -- Vérifier que le prompt est de type 'vote'
-  IF NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN group_prompts gp ON gp.id = dr.group_prompt_id
-    WHERE dr.id = NEW.round_id
-    AND gp.type = 'vote'
-  ) THEN
-    RAISE EXCEPTION 'Can only vote on rounds with vote-type prompts';
-  END IF;
-
-  -- Vérifier que target_user_id appartient au même groupe que le round
-  IF NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN group_members gm ON gm.group_id = dr.group_id
-    WHERE dr.id = NEW.round_id
-    AND gm.user_id = NEW.target_user_id
-    AND gm.status = 'active'
-  ) THEN
-    RAISE EXCEPTION 'Target user must be an active member of the round group';
-  END IF;
-
-  -- Vérifier que le voteur appartient au groupe (déjà couvert par M1, mais double sécurité)
-  IF NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN group_members gm ON gm.group_id = dr.group_id
-    WHERE dr.id = NEW.round_id
-    AND gm.user_id = NEW.voter_id
-    AND gm.status = 'active'
-  ) THEN
-    RAISE EXCEPTION 'Voter must be an active member of the round group';
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Fonction pour bloquer modification des votes
-CREATE OR REPLACE FUNCTION prevent_vote_modification()
-RETURNS TRIGGER AS $$
-BEGIN
-  RAISE EXCEPTION 'Votes are definitive and cannot be modified or deleted';
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger BEFORE INSERT pour vérifier l'intégrité
-CREATE TRIGGER round_votes_integrity_check
-  BEFORE INSERT ON round_votes
-  FOR EACH ROW
-  EXECUTE FUNCTION check_vote_integrity();
-
--- Triggers BEFORE UPDATE/DELETE pour empêcher modification
-CREATE TRIGGER round_votes_prevent_update
-  BEFORE UPDATE ON round_votes
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_vote_modification();
-
-CREATE TRIGGER round_votes_prevent_delete
-  BEFORE DELETE ON round_votes
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_vote_modification();
-```
-
-### Triggers pour `submissions` (définitives sauf soft delete admin)
-
-```sql
--- Fonction pour empêcher modification des soumissions
-CREATE OR REPLACE FUNCTION prevent_submission_modification()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Exception pour soft delete admin uniquement
-  IF TG_OP = 'UPDATE' AND NEW.deleted_by_admin IS NOT NULL AND OLD.deleted_by_admin IS NULL THEN
-    -- Vérifier que l'utilisateur est admin/owner du groupe
-    IF EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      JOIN group_members gm ON gm.group_id = dr.group_id
-      WHERE dr.id = NEW.round_id
-      AND gm.user_id = auth.uid()
-      AND gm.role IN ('owner', 'admin')
-      AND gm.status = 'active'
-    ) THEN
-      RETURN NEW; -- Autoriser soft delete admin
-    END IF;
-  END IF;
-
-  RAISE EXCEPTION 'Submissions are definitive and cannot be modified or deleted (except admin soft delete)';
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers pour empêcher modification des soumissions
-CREATE TRIGGER submissions_prevent_update
-  BEFORE UPDATE ON submissions
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_submission_modification();
-
-CREATE TRIGGER submissions_prevent_delete
-  BEFORE DELETE ON submissions
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_submission_modification();
-```
-
-### Extension possible pour `reactions`
-
-```sql
--- Trigger similaire pour reactions (si édition/suppression autorisée)
-CREATE TRIGGER reactions_update_check
-  BEFORE UPDATE ON reactions
-  FOR EACH ROW
-  EXECUTE FUNCTION check_round_not_closed_for_reactions();
-
-CREATE TRIGGER reactions_delete_check
-  BEFORE DELETE ON reactions
-  FOR EACH ROW
-  EXECUTE FUNCTION check_round_not_closed_for_reactions();
-```
-
-### Trigger d'intégrité round ↔ prompt (même groupe)
-
-```sql
--- Fonction pour vérifier cohérence round-prompt
-CREATE OR REPLACE FUNCTION check_round_prompt_integrity()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Vérifier que le group_prompt_id appartient au même groupe que le round
-  IF NOT EXISTS (
-    SELECT 1 FROM group_prompts gp
-    WHERE gp.id = NEW.group_prompt_id
-    AND gp.group_id = NEW.group_id
-    AND gp.is_active = true
-  ) THEN
-    RAISE EXCEPTION 'Round prompt must belong to the same group and be active';
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger sur daily_rounds pour vérifier cohérence
-CREATE TRIGGER daily_rounds_prompt_integrity_check
-  BEFORE INSERT OR UPDATE ON daily_rounds
-  FOR EACH ROW
-  EXECUTE FUNCTION check_round_prompt_integrity();
-```
-
-### Normalisation des join_code
-
-```sql
--- Index unique sur join_code pour éviter collisions
-CREATE UNIQUE INDEX groups_join_code_unique
-ON groups (UPPER(join_code))
-WHERE join_enabled = true AND is_active = true;
-
--- Fonction trigger pour normaliser join_code
-CREATE OR REPLACE FUNCTION normalize_join_code()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Normaliser en UPPER si join_code est défini
-  IF NEW.join_code IS NOT NULL THEN
-    NEW.join_code = UPPER(TRIM(NEW.join_code));
-
-    -- Vérifier format (6 caractères alphanumériques)
-    IF NEW.join_code !~ '^[A-Z0-9]{6}$' THEN
-      RAISE EXCEPTION 'Join code must be exactly 6 alphanumeric characters';
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger sur groups pour normalisation
-CREATE TRIGGER groups_normalize_join_code
-  BEFORE INSERT OR UPDATE ON groups
-  FOR EACH ROW
-  EXECUTE FUNCTION normalize_join_code();
-```
+- **`comments`** : Empêche modification/suppression après fermeture du round, sauf soft delete admin
+- **`round_votes`** : Bloque toute modification des votes (définitifs) + validation d'intégrité à l'insertion
+- **`submissions`** : Empêche modification/suppression des soumissions, sauf soft delete admin
+- **`reactions`** : Contrôle temporel similaire aux commentaires (si édition autorisée)
+- **`daily_rounds`** : Validation cohérence round ↔ prompt (même groupe)
+- **`groups`** : Normalisation automatique des `join_code` en UPPER + validation format
 
 ## 🔐 Intégrité et contrôle d'accès
 
@@ -450,212 +147,24 @@ CREATE TRIGGER groups_normalize_join_code
 
 **Objectif** : Empêcher soumissions/commentaires/votes d'utilisateurs non-membres du groupe.
 
-```sql
--- Fonction de validation d'appartenance au groupe
-CREATE OR REPLACE FUNCTION check_group_membership()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Vérifier que l'utilisateur est membre actif du groupe du round
-  IF NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    JOIN group_members gm ON gm.group_id = dr.group_id
-    WHERE dr.id = NEW.round_id
-    AND gm.user_id = NEW.author_id  -- ou voter_id selon la table
-    AND gm.status = 'active'
-  ) THEN
-    RAISE EXCEPTION 'User must be an active member of the round group';
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers pour submissions
-CREATE TRIGGER submissions_group_check
-  BEFORE INSERT ON submissions
-  FOR EACH ROW
-  EXECUTE FUNCTION check_group_membership();
-
--- Triggers pour comments
-CREATE TRIGGER comments_group_check
-  BEFORE INSERT ON comments
-  FOR EACH ROW
-  EXECUTE FUNCTION check_group_membership();
-
--- Note: round_votes utilise déjà check_vote_integrity() qui inclut cette vérification
-```
-
-**Alternative RLS** (Row Level Security) :
-
-```sql
--- Politique RLS pour submissions
-CREATE POLICY submissions_group_member_only ON submissions
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      JOIN group_members gm ON gm.group_id = dr.group_id
-      WHERE dr.id = round_id
-      AND gm.user_id = auth.uid()
-      AND gm.status = 'active'
-    )
-  );
-
--- Politique similaire pour comments
-CREATE POLICY comments_group_member_only ON comments
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      JOIN group_members gm ON gm.group_id = dr.group_id
-      WHERE dr.id = round_id
-      AND gm.user_id = auth.uid()
-      AND gm.status = 'active'
-    )
-  );
-
--- Politique INSERT conditionnelle pour comments (doit avoir soumis)
-CREATE POLICY comments_must_have_submitted ON comments
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM submissions s
-      WHERE s.round_id = round_id
-      AND s.author_id = auth.uid()
-    )
-    OR EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      WHERE dr.id = round_id
-      AND dr.status = 'closed'
-    )
-  );
-
--- Politique INSERT conditionnelle pour reactions (doit avoir soumis)
-CREATE POLICY reactions_must_have_submitted ON reactions
-  FOR INSERT
-  WITH CHECK (
-    -- Pour les réactions sur submissions
-    (entity_type = 'submission' AND EXISTS (
-      SELECT 1 FROM submissions s1
-      JOIN submissions s2 ON s2.round_id = s1.round_id
-      WHERE s1.id = entity_id
-      AND s2.author_id = auth.uid()
-    ))
-    OR
-    -- Pour les réactions sur comments
-    (entity_type = 'comment' AND EXISTS (
-      SELECT 1 FROM comments c
-      JOIN submissions s ON s.round_id = c.round_id
-      WHERE c.id = entity_id
-      AND s.author_id = auth.uid()
-    ))
-    OR
-    -- Ou si le round est fermé
-    EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      WHERE (
-        (entity_type = 'submission' AND EXISTS (
-          SELECT 1 FROM submissions s WHERE s.id = entity_id AND s.round_id = dr.id
-        ))
-        OR
-        (entity_type = 'comment' AND EXISTS (
-          SELECT 1 FROM comments c WHERE c.id = entity_id AND c.round_id = dr.id
-        ))
-      )
-      AND dr.status = 'closed'
-    )
-  );
-
--- Politique INSERT conditionnelle pour votes (doit avoir soumis)
-CREATE POLICY round_votes_must_have_submitted ON round_votes
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM submissions s
-      WHERE s.round_id = round_id
-      AND s.author_id = auth.uid()
-    )
-    OR EXISTS (
-      SELECT 1 FROM daily_rounds dr
-      WHERE dr.id = round_id
-      AND dr.status = 'closed'
-    )
-  );
-```
+**Implémentation** : Triggers de validation ou politiques RLS vérifiant l'appartenance au groupe avant toute action.
 
 ### M2 - Owner unique et toujours membre
 
 **Objectif** : Garantir qu'il y a toujours exactement 1 owner par groupe.
 
-```sql
--- Index partiel d'unicité pour owner
-CREATE UNIQUE INDEX group_members_unique_owner
-ON group_members (group_id)
-WHERE role = 'owner' AND status = 'active';
-
--- Fonction pour maintenir l'owner lors des transferts
-CREATE OR REPLACE FUNCTION ensure_owner_presence()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Si on supprime/désactive le dernier owner
-  IF (OLD.role = 'owner' AND OLD.status = 'active')
-     AND (NEW IS NULL OR NEW.role != 'owner' OR NEW.status != 'active') THEN
-
-    -- Vérifier qu'il reste au moins un owner actif
-    IF NOT EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_id = OLD.group_id
-      AND role = 'owner'
-      AND status = 'active'
-      AND id != OLD.id
-    ) THEN
-      RAISE EXCEPTION 'Cannot remove the last active owner of the group';
-    END IF;
-  END IF;
-
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
--- Triggers pour maintenir l'owner
-CREATE TRIGGER group_members_owner_check
-  BEFORE UPDATE OR DELETE ON group_members
-  FOR EACH ROW
-  EXECUTE FUNCTION ensure_owner_presence();
-```
+**Implémentation** : Index partiel d'unicité + triggers empêchant la suppression du dernier owner actif.
 
 ## 📈 Index de performance
 
-### Index pour "Mon activité" et support RLS
+### Index stratégiques
 
-```sql
--- Index pour requêtes "Mon activité"
-CREATE INDEX submissions_author_id_idx ON submissions (author_id);
-CREATE INDEX comments_author_id_idx ON comments (author_id);
-CREATE INDEX round_votes_voter_id_idx ON round_votes (voter_id);
-CREATE INDEX reactions_user_id_idx ON reactions (user_id);
-
--- Index support RLS (visibilité conditionnelle)
-CREATE INDEX submissions_round_author_idx ON submissions (round_id, author_id);
-CREATE INDEX comments_round_author_idx ON comments (round_id, author_id);
-CREATE INDEX round_votes_round_voter_idx ON round_votes (round_id, voter_id);
-
--- Index pour jointures fréquentes dans triggers/RLS
-CREATE INDEX group_members_group_user_status_idx ON group_members (group_id, user_id, status);
-CREATE INDEX daily_rounds_group_status_idx ON daily_rounds (group_id, status);
-CREATE INDEX group_prompts_group_active_idx ON group_prompts (group_id, is_active);
-
--- Index pour recherches par entité dans reactions
-CREATE INDEX reactions_entity_idx ON reactions (entity_type, entity_id);
-
--- Index partiel pour notifications actives
-CREATE INDEX notifications_unread_idx ON notifications (user_id, created_at)
-WHERE read_at IS NULL;
-
--- Index pour les rounds ouverts (jobs de fermeture)
-CREATE INDEX daily_rounds_open_close_idx ON daily_rounds (status, close_at)
-WHERE status = 'open';
-```
+- **Activité utilisateur** : `author_id`, `voter_id`, `user_id` sur les tables d'interaction
+- **Support RLS** : Index composites `(round_id, author_id)` pour la visibilité conditionnelle
+- **Jointures fréquentes** : `(group_id, user_id, status)` pour les vérifications de membership
+- **Jobs automatisés** : Index sur `status` et `close_at` pour les rounds ouverts
+- **Notifications** : Index partiel sur les notifications non lues
+- **Recherche d'entités** : Index sur `(entity_type, entity_id)` pour les réactions
 
 ## 🗑️ Suppression en cascade
 
