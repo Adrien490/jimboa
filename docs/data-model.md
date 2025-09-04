@@ -19,12 +19,10 @@ erDiagram
     daily_rounds ||--o{ round_votes : "votes"
     profiles ||--o{ submissions : "auteur"
     profiles ||--o{ comments : "commentaire"
-    profiles ||--o{ reactions : "réaction"
     profiles ||--o{ round_votes : "voteur"
     daily_rounds ||--o{ comments : "discussion globale"
     submissions ||--o{ submission_media : "médias"
-    submissions ||--o{ reactions : "réactions sur"
-    comments ||--o{ reactions : "réactions sur"
+    %% Reactions supprimées
     global_prompts ||--o{ prompt_tag_links : "taggé"
     group_prompts ||--o{ prompt_tag_links : "taggé"
     prompt_tags ||--o{ prompt_tag_links : "tag"
@@ -73,7 +71,6 @@ erDiagram
 | --------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | **comments**    | `round_id`, `author_id`, `body`, `created_at`, `updated_at`, `deleted_at` (NULL), `deleted_by_admin` (NULL) | Éditables/supprimables **jusqu'à** fermeture ; **soft delete admin** autorisé après fermeture |
 | **round_votes** | `round_id`, `voter_id`, `target_user_id`, `reason` (NULL), `created_at`                                     | `UNIQUE(round_id, voter_id)` ; **auto‑vote autorisé** ; `reason` libre et optionnel           |
-| **reactions**   | `entity_type` (`submission`\|`comment`), `entity_id`, `user_id`, `type`, `created_at`                       | `UNIQUE(entity_type, entity_id, user_id, type)` ; réactions typées (ex: like, haha, wow…)     |
 
 ### 🔔 Notifications & Préférences
 
@@ -162,7 +159,7 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 
 ## 🔐 Règles de sécurité
 
-- **Appartenance stricte** : Toute action (soumettre/commenter/réagir/voter) requiert membership du groupe
+- **Appartenance stricte** : Toute action (soumettre/commenter/voter) requiert membership du groupe
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Heure française fixe** : Toute l'application en Europe/Paris, planification française, stockage UTC
 - **Prompts éligibles v1** : **seulement** `group_prompts.is_active=true`
@@ -175,7 +172,6 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 
 - **`submissions`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
 - **`comments`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
-- **`reactions`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
 - **`round_votes`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
 
 ### Mécanisme de gamification
@@ -244,7 +240,6 @@ USING (
 - **`comments`** : Empêche modification/suppression auteur après fermeture, autorise soft delete admin (`deleted_by_admin`, `deleted_at`)
 - **`round_votes`** : Bloque toute modification des votes (définitifs) + validation d'intégrité à l'insertion
 - **`submissions`** : Empêche modification/suppression des soumissions, sauf soft delete admin
-- **`reactions`** : Contrôle temporel similaire aux commentaires (si édition autorisée)
 - **`daily_rounds`** : Validation cohérence round ↔ prompt (même groupe)
 - **`groups`** : Normalisation automatique des `join_code` en UPPER + validation format
 
@@ -271,7 +266,6 @@ USING (
 - **Jointures fréquentes** : `(group_id, user_id, status)` pour les vérifications de membership
 - **Jobs automatisés** : Index sur `status` et `close_at` pour les rounds ouverts
 - **Notifications** : Index partiel sur les notifications non lues
-- **Recherche d'entités** : Index sur `(entity_type, entity_id)` pour les réactions
 
 ## 🗑️ Suppression en cascade
 
@@ -285,4 +279,4 @@ USING (
   - `user_group_prefs.group_id` → suppression des préférences
   - `notifications.group_id` → suppression des notifications
 - **Suppression Storage asynchrone** : Images de groupe et médias associés supprimés en arrière-plan
-- **Suppression transitive** : Les FK des tables liées aux manches sont aussi supprimées (submissions, comments, votes, reactions, etc.)
+- **Suppression transitive** : Les FK des tables liées aux manches sont aussi supprimées (submissions, comments, votes, etc.)

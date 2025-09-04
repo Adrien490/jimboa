@@ -18,7 +18,7 @@ graph LR
 1. **Planification automatique** : Création automatique pour chaque jour français (invariant J à J-1)
 2. **Ouverture** : Notification automatique à tous les membres (si autorisée)
 3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
-4. **Interactions** : Commentaires, réactions et votes visibles après avoir soumis
+4. **Interactions** : Commentaires et votes visibles après avoir soumis
 5. **Vote** : Si type="vote", 1 vote par personne maximum (auto‑vote autorisé)
 6. **Fermeture** : Archivage automatique → consultation en lecture seule
 
@@ -55,7 +55,7 @@ graph LR
 - **Commentaires** : Discussion globale par manche (éditables/supprimables jusqu'à la fermeture)
 - **Réactions** : Réactions typées sur soumissions et commentaires (1 par type/user/entité)
 - **Votes** : 1 vote par manche (type "vote"), définitif, auto‑vote autorisé
-- **Visibilité conditionnelle** : Tout (soumissions, commentaires, réactions, votes) devient visible après sa propre soumission
+- **Visibilité conditionnelle** : Tout (soumissions, commentaires, votes) devient visible après sa propre soumission
 
 ### 🔔 Notifications intelligentes
 

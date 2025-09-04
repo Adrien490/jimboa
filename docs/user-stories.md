@@ -419,7 +419,7 @@ Alors le groupe est supprimé avec ON DELETE CASCADE sur toutes les FK
 Et toutes les données liées sont automatiquement supprimées :
   - group_members (membres)
   - group_settings (paramètres)
-  - daily_rounds (manches) → et leurs FK (submissions, comments, votes, reactions)
+  - daily_rounds (manches) → et leurs FK (submissions, comments, votes)
   - group_prompts (prompts locaux)
   - group_prompt_suggestions (suggestions locales)
   - group_ownership_transfers (transferts)
@@ -822,12 +822,12 @@ Et je ne peux plus créer d'autre soumission pour ce round
 
 ```gherkin
 Étant donné un utilisateur qui n'a pas encore participé dans un round ouvert
-Quand il tente de consulter les soumissions/commentaires/votes/réactions
+Quand il tente de consulter les soumissions/commentaires/votes
 Alors les requêtes SELECT retournent des résultats vides (RLS bloque)
 
 Étant donné un utilisateur qui a participé dans un round ouvert (soumission OU vote)
 Quand il consulte les interactions du round
-Alors il voit toutes les soumissions, commentaires, votes et réactions
+Alors il voit toutes les soumissions, commentaires et votes
 
 Étant donné un round fermé (status='closed')
 Quand n'importe quel membre du groupe consulte les interactions
@@ -840,7 +840,7 @@ Alors je vois toutes les interactions du round (vote = participation)
 
 #### Règles métier
 
-- **RLS activé** sur `submissions`, `comments`, `reactions`, `round_votes`
+- **RLS activé** sur `submissions`, `comments`, `round_votes`
 - **Condition de visibilité unifiée** : `round.status='closed'` OU `user_has_participated(round_id, auth.uid())`
 - **Participation définie comme** : `EXISTS(ma_soumission)` OU `EXISTS(mon_vote)`
 - **Performances** : Index sur `(round_id, author_id)` et `(round_id, voter_id)` pour les requêtes RLS

@@ -5,7 +5,7 @@
 [![Website](https://img.shields.io/badge/Website-jimboa.fr-blue)](https://jimboa.fr)
 [![Status](https://img.shields.io/badge/Status-En%20développement-yellow)]()
 
-> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier texte/média, commenter, réagir et voter. À la fermeture, la manche est archivée et reste consultable par le groupe.
+> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier texte/média, commenter et voter. À la fermeture, la manche est archivée et reste consultable par le groupe.
 
 ---
 
