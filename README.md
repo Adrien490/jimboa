@@ -1,11 +1,11 @@
-# 🎮 Jimbao
+# 🎮 Jimboa
 
 **Un jeu social quotidien pour groupes privés**
 
-[![Website](https://img.shields.io/badge/Website-jimbao.fr-blue)](https://jimbao.fr)
+[![Website](https://img.shields.io/badge/Website-jimboa.fr-blue)](https://jimboa.fr)
 [![Status](https://img.shields.io/badge/Status-En%20développement-yellow)]()
 
-> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier immédiatement texte/média, commenter, réagir et voter. À la fermeture, la manche est archivée et reste consultable par le groupe.
+> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier texte/média, commenter, réagir et voter. À la fermeture, la manche est archivée et reste consultable par le groupe.
 
 ---
 
@@ -77,10 +77,10 @@ graph LR
 ### 📋 Règles fondamentales
 
 1. **Planification automatique** : Création automatique toutes les 24h à l'heure locale du groupe
-2. **Ouverture** : Notification automatique à tous les membres
+2. **Ouverture** : Notification automatique à tous les membres (si autorisée)
 3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
-4. **Interactions** : Commentaires et votes visibles après avoir soumis sa réponse
-5. **Vote** : Si type="vote", 1 vote par personne maximum
+4. **Interactions** : Commentaires, réactions et votes visibles après avoir soumis
+5. **Vote** : Si type="vote", 1 vote par personne maximum (auto‑vote autorisé)
 6. **Fermeture** : Archivage automatique → consultation en lecture seule
 
 ## ✨ Fonctionnalités clés (Périmètre v1)
@@ -96,58 +96,37 @@ graph LR
   - Redimensionnement automatique vers plusieurs tailles
   - Suppression en cascade lors de la suppression du groupe
 - **Authentification** : Google OAuth uniquement
-- **Configuration** : Email du créateur défini via `APP_CREATOR_EMAIL` dans .env
+- **Configuration** : Email du créateur défini via `APP_CREATOR_EMAIL` dans `.env`
 
 ### 🎯 Système de prompts hybride
 
-- **Banque globale curatée** : Starter pack de prompts approuvés pour tous les groupes
-- **Prompts locaux** : Owners/admins peuvent créer des prompts spécifiques à leur groupe
-- **Système de suggestions** : Proposer des prompts locaux réussis vers la banque globale
-- **Suggestions locales** : Membres proposent des prompts pour leur groupe (modération owner/admin)
-- **Suggestions globales** : Prompts locaux réussis proposés pour la banque globale (modération app creator)
-- **Types** : Question, Vote, Challenge (global et local)
-- **Workflow global** : Pending → Approved/Rejected → Archived
-- **Workflow local** : Création directe par owner/admin, édition libre
-- **Tagging & filtrage** : Classification par tags, langue, difficulté
-- **Sélection** : Automatique aléatoire parmi les prompts locaux du groupe
+- **Banque globale curatée** : Catalogue géré par le créateur (qualité/édition)
+- **Prompts locaux** : Owners/admins créent des prompts spécifiques à leur groupe
+- **Suggestions** :
+  - Membres → banque **locale** (modération owner/admin)
+  - Prompts locaux → banque **globale** (modération app creator)
+- **Types** : `question`, `vote`, `challenge`
+- **Sélection quotidienne (v1)** : **Uniquement** parmi les prompts **locaux** actifs (`group_prompts.is_active=true`). La banque globale ne nourrit pas directement la sélection v1 ; elle sert de réservoir éditorial et de provenance de certains prompts locaux.
+
+> _Note : Un mode mixte (local + global approved) pourra être activé ultérieurement. Les garde‑fous et champs nécessaires sont déjà prévus._
 
 ### 💬 Interactions sociales
 
-- **Soumissions** : Texte + médias, 1 par user/manche, visibles après avoir soumis sa propre réponse, définitives (pas d'édition ni suppression)
-- **Commentaires** : Discussion globale sous chaque question du jour (visible après avoir soumis)
-- **Votes** : 1 vote par manche (type "vote" uniquement), définitifs (pas de modification)
-- **Visibilité conditionnelle** : Soumissions, discussion et votes visibles uniquement après avoir soumis sa réponse
+- **Soumissions** : Texte + médias, 1 par user/manche, définitives
+- **Commentaires** : Discussion globale par manche (éditables/supprimables jusqu'à la fermeture)
+- **Réactions** : Réactions typées sur soumissions et commentaires (1 par type/user/entité)
+- **Votes** : 1 vote par manche (type "vote"), définitif, auto‑vote autorisé
+- **Visibilité conditionnelle** : Tout (soumissions, commentaires, réactions, votes) devient visible après sa propre soumission
 
 ### 🔔 Notifications intelligentes
 
-- **Ouverture** : Nouveau prompt disponible
-- **Préférences** : Par utilisateur et par groupe
+- **Ouverture** : Nouveau prompt disponible (`round_open`)
+- **Préférences** : Par utilisateur **et** par groupe
 
 ### 📚 Consultation des manches
 
 - **Archives** : Toutes les manches fermées restent consultables
-- **Pas de scoring** : Focus sur le partage et l'interaction
 - **Lecture seule** : Aucune interaction possible sur les manches fermées
-
-### 🛡️ Gestion des prompts
-
-#### 🌍 Prompts globaux (curatés)
-
-- **Accès exclusif** : Seul le créateur de l'app peut parcourir et gérer la banque globale
-- **Starter pack** : Collection initiale de prompts approuvés par le créateur
-- **Contributions** : Suggestions issues des meilleurs prompts locaux (via suggestions)
-- **Modération centralisée** : App creator valide les ajouts à la banque globale
-- **Interface d'admin** : Interface exclusive au créateur pour gérer la banque globale
-- **Qualité éditoriale** : Cohérence, universalité, respect des valeurs
-
-#### 🏠 Prompts locaux (liberté créative)
-
-- **Accès restreint** : Seuls les owners/admins peuvent parcourir et gérer la banque locale de leur groupe
-- **Création libre** : Owners/admins créent directement pour leur groupe
-- **Pas de clonage direct** : Les prompts globaux ne sont plus directement clonables (accès restreint)
-- **Événements privés** : Prompts spécifiques (anniversaires, blagues internes)
-- **Langues locales** : Adaptation linguistique et culturelle
-- **Pas de modération** : Liberté totale dans le cadre du groupe
 
 ## 🗄️ Modèle de données (ERD)
 
@@ -160,9 +139,7 @@ erDiagram
     groups ||--o{ group_members : "contient"
     groups ||--o{ daily_rounds : "manches"
     groups ||--o{ group_prompts : "prompts locaux"
-    global_prompts ||--o{ daily_rounds : "utilisé dans round"
-    group_prompts ||--o{ daily_rounds : "utilisé dans round"
-    global_prompts ||--o{ group_prompts : "cloné depuis"
+    global_prompts ||--o{ group_prompts : "provenance (optionnelle)"
     profiles ||--o{ group_prompt_suggestions : "suggère vers groupe"
     group_prompts ||--o{ global_prompt_suggestions : "suggéré vers global"
     profiles ||--o{ global_prompt_suggestions : "suggère vers global"
@@ -194,72 +171,68 @@ erDiagram
     groups ||--o{ notifications : "contexte"
 ```
 
-### 📊 Dictionnaire des tables
+### 📊 Dictionnaire des tables (v1)
 
 #### 👤 Utilisateurs & Groupes
 
-| Table              | Champs principaux                                                                                   | Contraintes                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| **profiles**       | `id` (=auth), `display_name`, `image_path`                                                          | Lié à auth.users (Google)                   |
-| **groups**         | `name`, `type` (friends\|couple), `owner_id`, `timezone`, `join_enabled`, `join_code`, `image_path` | `owner_id` → profiles, owner unique         |
-| **group_members**  | `group_id`, `user_id`, `role` (owner\|admin\|member)                                                | UNIQUE(group_id, user_id)                   |
-| **group_settings** | `group_id`, `drop_time`, `notifications_enabled`                                                    | 1:1 avec groups, close_after_hours=24h fixe |
+| Table              | Champs principaux                                                                                                                                | Contraintes & remarques                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **profiles**       | `id` (=auth), `display_name`, `image_path`, `created_at`, `updated_at`                                                                           | FK → `auth.users(id)` ; `display_name` non vide ; avatar Google ou personnalisé                                        |
+| **groups**         | `name`, `type` (`friends`\|`couple`), `owner_id`, `timezone`, `join_enabled`, `join_code`, `image_path`, `is_active`, `created_at`, `updated_at` | `owner_id` → `profiles` ; **invariant owner unique** ; `join_code` en clair ; **timezone figé** ; index sur `owner_id` |
+| **group_members**  | `group_id`, `user_id`, `role` (`owner`\|`admin`\|`member`), `created_at`                                                                         | `UNIQUE(group_id, user_id)` ; **1 seul `owner`** par groupe (index partiel) ; FK vers `groups` et `profiles`           |
+| **group_settings** | `group_id` (PK), `drop_time` (HH:MM, nullable pour héritage app), `notifications_enabled` (bool, défaut `true`)                                  | 1:1 avec `groups` ; **durée de manche fixe 24h (constante applicative)**                                               |
 
 #### 🎯 Prompts & Manches
 
-| Table                         | Champs principaux                                                                                                                                                                 | Contraintes                                                            |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **global_prompts**            | `type` (question\|vote\|challenge), `title`, `body`, `status` (pending\|approved\|rejected\|archived), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb) | Banque globale curatée, seuls les 'approved' sont visibles aux groupes |
-| **group_prompts**             | `group_id`, `type`, `title`, `body`, `is_active`, `cloned_from_global`, `created_by`, `metadata` (jsonb)                                                                          | Prompts locaux créés/clonés par owners/admins                          |
-| **group_prompt_suggestions**  | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (pending\|approved\|rejected), `feedback`                                                                           | Suggestions membres → banque locale (modération owner/admin)           |
-| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions prompts locaux → banque globale (modération app creator)   |
-| **daily_rounds**              | `group_id`, `global_prompt_id`, `group_prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed)                                                                            | UNIQUE(group_id, scheduled_for), utilise soit global soit group prompt |
-| **submissions**               | `round_id`, `author_id`, `content_text`                                                                                                                                           | UNIQUE(round_id, author_id)                                            |
+| Table                         | Champs principaux                                                                                                                                                                                             | Contraintes & remarques                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **global_prompts**            | `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `status` (`pending`\|`approved`\|`rejected`\|`archived`), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb), `created_at` | Banque globale curatée ; **v1 non utilisée pour la sélection quotidienne** ; historique des modifs                                  |
+| **group_prompts**             | `group_id`, `type`, `title`, `body`, `is_active` (bool), `cloned_from_global` (nullable), `created_by`, `metadata` (jsonb), `created_at`, `updated_at`                                                        | Prompts locaux (créés par owner/admin). `cloned_from_global` = provenance _optionnelle_ (non clonable en UI v1)                     |
+| **group_prompt_suggestions**  | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                     | Suggestions **membres → banque locale** (modération owner/admin)                                                                    |
+| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                                       | Suggestions **prompts locaux → banque globale** (modération app creator)                                                            |
+| **daily_rounds**              | `group_id`, `group_prompt_id`, `scheduled_for` (DATE), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `created_at`, `updated_at`                                | `UNIQUE(group_id, scheduled_for)` ; **exactement 24h** entre `open_at` et `close_at` ; **pas de lien direct vers `global_prompts`** |
+| **submissions**               | `round_id`, `author_id`, `content_text`, `created_at`                                                                                                                                                         | `UNIQUE(round_id, author_id)` ; définitives ; FK vers `daily_rounds` et `profiles`                                                  |
+| **submission_media**          | `submission_id`, `storage_path`, `kind` (`image`\|`video`\|`audio`\|`file`), `metadata` (jsonb), `created_at`                                                                                                 | 0..n médias par soumission ; validations de taille/format                                                                           |
 
 #### 💬 Interactions
 
-| Table           | Champs principaux                        | Contraintes                                |
-| --------------- | ---------------------------------------- | ------------------------------------------ |
-| **comments**    | `round_id`, `author_id`, `body`          | Discussion globale sur la question du jour |
-| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id)                 |
+| Table           | Champs principaux                                                                     | Contraintes & remarques                                                                             |
+| --------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **comments**    | `round_id`, `author_id`, `body`, `created_at`, `updated_at`, `deleted_at` (NULL)      | Éditables/supprimables **jusqu'à** la fermeture du round ; discussion globale liée à `daily_rounds` |
+| **round_votes** | `round_id`, `voter_id`, `target_user_id`, `reason` (NULL), `created_at`               | `UNIQUE(round_id, voter_id)` ; **auto‑vote autorisé** ; `reason` libre et optionnel                 |
+| **reactions**   | `entity_type` (`submission`\|`comment`), `entity_id`, `user_id`, `type`, `created_at` | `UNIQUE(entity_type, entity_id, user_id, type)` ; réactions typées (ex: like, haha, wow…)           |
 
-#### 🔔 Notifications
+#### 🔔 Notifications & Préférences
 
-| Table                | Champs principaux                      | Contraintes               |
-| -------------------- | -------------------------------------- | ------------------------- |
-| **notifications**    | `user_id`, `type`, `payload`, `status` | Types: round_open, etc.   |
-| **user_devices**     | `user_id`, `platform`, `token`         | Pour push notifications   |
-| **user_group_prefs** | `user_id`, `group_id`, `mute`, `push`  | UNIQUE(user_id, group_id) |
+| Table                | Champs principaux                                                        | Contraintes & remarques                                                      |
+| -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **notifications**    | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`… ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`) |
+| **user_devices**     | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `created_at`   | **UNIQUE(token)** ; 1 token ne peut appartenir qu'à un seul compte           |
+| **user_group_prefs** | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                         |
 
-### ⚖️ Contraintes métier
+#### 🏷️ Tagging
 
-#### 🎯 Règles de participation
+| Table                | Champs principaux                                  | Contraintes & remarques                                    |
+| -------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| **prompt_tags**      | `id`, `name`                                       | Tags libres (langue, thème, ton, difficulté…)              |
+| **prompt_tag_links** | `prompt_id`, `scope` (`global`\|`group`), `tag_id` | Lien polymorphe : (`scope`, `prompt_id`) + `tag_id` unique |
 
-| Contrainte                    | Description                                  | Implémentation                                            |
-| ----------------------------- | -------------------------------------------- | --------------------------------------------------------- |
-| **1 round/jour/groupe**       | 1 manche par 24h, pas de chevauchement       | `UNIQUE(group_id, scheduled_for)`                         |
-| **1 soumission/user/round**   | Une participation par manche, pas d'édition  | `UNIQUE(round_id, author_id)`                             |
-| **Soumission définitive**     | Pas de suppression après création            | Soumission obligatoirement conservée une fois créée       |
-| **1 vote/user/round**         | Vote unique et définitif, auto-vote autorisé | `UNIQUE(round_id, voter_id)`                              |
-| **Visibilité conditionnelle** | Soumissions visibles après participation     | Soumissions visibles après avoir soumis sa propre réponse |
-| **Visibilité conditionnelle** | Interactions après soumission                | Commentaires/votes visibles après avoir soumis sa réponse |
+### ⚖️ Contraintes métier (DB & applicatif)
 
-#### 🔐 Règles de sécurité
+- **1 round/jour/groupe** : `UNIQUE(group_id, scheduled_for)`
+- **1 soumission/user/round** : `UNIQUE(round_id, author_id)`
+- **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
+- **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
+- **Réactions typées uniques** : `UNIQUE(entity_type, entity_id, user_id, type)`
+- **Sélection quotidienne v1** : prompts **locaux** avec `is_active=true` ; exclusion des `N` derniers prompts utilisés par le groupe (fenêtre glissante)
+- **Droit à l'oubli** : contributions conservées **anonymisées** (remplacement par "Utilisateur supprimé" au niveau applicatif)
 
-- **Appartenance stricte** : Toute action requiert membership du groupe
+### 🔐 Règles de sécurité
+
+- **Appartenance stricte** : Toute action (soumettre/commenter/réagir/voter) requiert membership du groupe
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Fuseau horaire** : Défini à la création (non modifiable), planification locale, stockage UTC
-- **Modération centralisée** : Seul le créateur de l'app (APP_CREATOR_EMAIL) peut valider les prompts
-- **Prompts approuvés uniquement** : Les groupes ne peuvent sélectionner que des prompts avec status='approved'
-
-#### 🔑 Sécurité des codes d'invitation
-
-- **Génération automatique** : Code créé à la création du groupe (6 caractères alphanumériques)
-- **Permanence** : Code permanent, pas d'expiration ni de quota d'utilisation
-- **Modification** : Possibilité de régénérer un nouveau code (invalide l'ancien)
-- **Stockage direct** : Code stocké en clair dans `groups.join_code`
-- **Rate limiting** : Maximum 5 tentatives de join par IP/heure
-- **Activation** : Code utilisable uniquement si `join_enabled=true`
+- **Prompts éligibles v1** : **seulement** `group_prompts.is_active=true`
 
 ## 🔔 Notifications & Préférences
 
@@ -281,120 +254,96 @@ flowchart TD
     E -->|Non| F[Email uniquement]
     E -->|Oui| G[Push + Email]
     G --> H[user_devices: ciblage par appareil]
-    H --> I[Localisation via locale]
 ```
 
-## 📋 User Stories
+## 📝 User Stories (référence)
 
-Pour consulter toutes les user stories détaillées organisées par épiques, voir : **[user-stories.md](./user-stories.md)**
-
-Le document contient 19 épiques couvrant :
-
-- Authentification & Profil (Google OAuth)
-- Gestion des groupes et rôles
-- Système de prompts et manches quotidiennes
-- Interactions sociales (commentaires, votes)
-- Notifications et préférences
-- Sécurité et intégrité des données
-
-### ✅ Critères d'acceptation (Gherkin)
-
-#### Soumission unique
-
-```gherkin
-Étant donné un round ouvert
-Quand je publie une deuxième soumission
-Alors l'action échoue avec "Une seule soumission par manche"
-```
-
-#### Vote unique (auto-vote autorisé)
-
-```gherkin
-Étant donné un round de type "vote"
-Quand je vote (y compris pour moi-même)
-Alors le vote est enregistré (auto-vote autorisé)
-Et je ne peux plus voter une seconde fois
-```
-
-#### Ouverture & rappel automatiques
-
-```gherkin
-Étant donné un round planifié pour aujourd'hui
-Quand open_at est atteint
-Alors le statut passe à "open" ET une notification est émise
-
-```
+Pour le détail complet des user stories organisées par épiques, voir **`user-stories.md`**.
 
 ## ⚙️ Workflow d'orchestration (Jobs)
 
-### 🔄 Jobs automatisés
+### 🔄 Principes
 
-```mermaid
-gantt
-    title Cycle quotidien des jobs
-    dateFormat HH:mm
-    axisFormat %H:%M
+- **Idempotence stricte** : transitions contrôlées par `status` + clés uniques
+- **Horodatage** : `open_at` et `close_at` calculés en UTC selon le **fuseau du groupe** et `drop_time`
+- **Durée fixe** : `close_at = open_at + INTERVAL '24 hours'`
+- **Locks** : advisory lock par `group_id` pour éviter les doubles transitions
 
-    section Planification
-    Création automatique 24h :active, plan, 00:00, 23:59
+### 📅 Création planifiée (toutes les heures)
 
-    section Exécution
-    Ouverture manches        :active, open, 06:00, 23:00
-    Fermeture & archivage    :active, close, 06:00, 23:59
-```
+**Objectif** : si la dernière manche est `closed` **depuis ≥ 24h**, créer `scheduled` pour `CURRENT_DATE` (fuseau du groupe), en choisissant un prompt **local actif** non utilisé récemment.
 
-#### 📅 Création automatique (toutes les heures)
+Pseudo‑SQL :
 
 ```sql
--- Pour chaque groupe dont la dernière manche est fermée depuis 24h
-INSERT INTO daily_rounds (group_id, prompt_id, scheduled_for, status)
-SELECT g.id, selected_prompt_id, NOW()::date, 'scheduled'
-FROM groups g
-LEFT JOIN daily_rounds dr_last ON (
-  dr_last.group_id = g.id
-  AND dr_last.id = (
-    SELECT id FROM daily_rounds dr2
-    WHERE dr2.group_id = g.id
-    ORDER BY scheduled_for DESC LIMIT 1
-  )
+WITH last_closed AS (
+  SELECT g.id AS group_id,
+         MAX(dr.close_at) AS last_close_at
+  FROM groups g
+  LEFT JOIN daily_rounds dr ON dr.group_id = g.id
+  GROUP BY g.id
+), eligible_groups AS (
+  SELECT lg.group_id
+  FROM last_closed lg
+  JOIN groups g ON g.id = lg.group_id
+  WHERE g.is_active = TRUE
+    AND (lg.last_close_at IS NULL OR lg.last_close_at <= NOW() - INTERVAL '24 hours')
 )
-WHERE g.is_active = true
+INSERT INTO daily_rounds (group_id, group_prompt_id, scheduled_for, status, created_at, updated_at)
+SELECT eg.group_id,
+       (
+         SELECT gp.id FROM group_prompts gp
+         WHERE gp.group_id = eg.group_id
+           AND gp.is_active = TRUE
+           AND gp.id NOT IN (
+             SELECT dr.group_prompt_id
+             FROM daily_rounds dr
+             WHERE dr.group_id = eg.group_id
+             ORDER BY dr.scheduled_for DESC
+             LIMIT 7 -- fenêtre glissante anti-répétition
+           )
+         ORDER BY random() LIMIT 1
+       ) AS group_prompt_id,
+       (NOW() AT TIME ZONE 'UTC')::date AS scheduled_for,
+       'scheduled', NOW(), NOW()
+FROM eligible_groups eg
+ON CONFLICT DO NOTHING;
+```
+
+### 🔓 Ouverture (toutes les 5 min)
+
+**Objectif** : passer `scheduled` → `open` à l'heure locale `drop_time`.
+
+```sql
+UPDATE daily_rounds dr
+SET status = 'open',
+    open_at = NOW(),
+    close_at = NOW() + INTERVAL '24 hours',
+    updated_at = NOW()
+FROM groups g
+JOIN group_settings gs ON gs.group_id = g.id
+WHERE dr.group_id = g.id
+  AND dr.status = 'scheduled'
   AND (
-    dr_last.id IS NULL -- Pas de manche précédente
-    OR (
-      dr_last.status = 'closed'
-      AND dr_last.close_at <= NOW() - INTERVAL '24 hours'
-    )
-  )
+    -- calcul "il est l'heure" dans le fuseau du groupe
+    (NOW() AT TIME ZONE g.timezone)::date >= dr.scheduled_for
+    AND to_char(NOW() AT TIME ZONE g.timezone, 'HH24:MI') >= to_char(gs.drop_time, 'HH24:MI')
+  );
 ```
 
-#### 🔓 Ouverture (toutes les 5 min)
+### 🔒 Fermeture (toutes les 5 min)
 
 ```sql
 UPDATE daily_rounds
-SET status = 'open', open_at = NOW()
-WHERE status = 'scheduled'
-  AND scheduled_for <= CURRENT_DATE
-  AND EXTRACT(hour FROM NOW()) >= EXTRACT(hour FROM drop_time)
-```
-
-#### 🔒 Fermeture & Archivage (toutes les 5 min)
-
-```sql
--- Transition: open → closed (état final)
-UPDATE daily_rounds
-SET status = 'closed', close_at = NOW()
+SET status = 'closed', updated_at = NOW()
 WHERE status = 'open' AND close_at <= NOW();
-
--- Les soumissions, commentaires et votes sont figés
--- La manche reste consultable indéfiniment
 ```
 
 ### 🔒 Garanties d'intégrité
 
-- **Idempotence** : Clés uniques + transitions strictes
-- **Concurrence** : Advisory locks par `group_id` si nécessaire
-- **Monitoring** : Logs des transitions de statut
+- **Transitions** : `scheduled → open → closed` uniquement
+- **Index** : `(group_id, scheduled_for)` unique ; index sur `status`, `open_at`, `close_at`
+- **Verrous** : advisory lock `pg_try_advisory_lock(group_id)` autour des jobs
 
 ## 🎨 Parcours UX prioritaires
 
@@ -416,10 +365,10 @@ flowchart LR
 
 ```
 ┌────────────────────────────────────────┐
-│  🎯 PROMPT DU JOUR                    │
-│  "Quel est votre super-pouvoir rêvé?"   │
+│  🎯 PROMPT DU JOUR                     │
+│  "Quel est votre super‑pouvoir rêvé?" │
 │                                        │
-│  [ ✍️ Répondre ]     ⏰ Ferme à 20h00     │
+│  [ ✍️ Répondre ]     ⏰ Ferme à 20h00   │
 ├────────────────────────────────────────┤
 │  🔒 Contenu masqué                     │
 │                                        │
@@ -428,7 +377,7 @@ flowchart LR
 │  • La discussion du groupe             │
 │  • Les votes (si applicable)           │
 │                                        │
-│  👥 3 membres ont déjà participé        │
+│  👥 3 membres ont déjà participé       │
 └────────────────────────────────────────┘
 ```
 
@@ -436,20 +385,20 @@ flowchart LR
 
 ```
 ┌────────────────────────────────────────┐
-│  🎯 PROMPT DU JOUR                    │
-│  "Quel est votre super-pouvoir rêvé?"   │
+│  🎯 PROMPT DU JOUR                     │
+│  "Quel est votre super‑pouvoir rêvé?" │
 │                                        │
 │  ✅ Votre réponse: "Téléportation!"     │
 ├────────────────────────────────────────┤
 │  📝 SOUMISSIONS (temps réel)           │
 │                                        │
 │  👤 Alice: "Lire dans les pensées!"    │
-│  👤 Bob: "Voler comme Superman"       │
-│  👤 Vous: "Téléportation!"            │
+│  👤 Bob: "Voler comme Superman"        │
+│  👤 Vous: "Téléportation!"             │
 ├────────────────────────────────────────┤
 │  🗳️ VOTES (si applicable)              │
-│  👤 Alice: 2 votes                    │
-│  👤 Bob: 1 vote                       │
+│  👤 Alice: 2 votes                      │
+│  👤 Bob: 1 vote                         │
 ├────────────────────────────────────────┤
 │  💬 DISCUSSION GLOBALE                 │
 │                                        │
@@ -465,37 +414,31 @@ flowchart LR
 ┌────────────────────────────────────────┐
 │  📚 MANCHE D'HIER - Fermée             │
 │                                        │
-│  👤 Bob: "Voler comme Superman"       │
-│  💬 3 commentaires                    │
+│  👤 Bob: "Voler comme Superman"        │
+│  💬 3 commentaires                      │
 │                                        │
 │  👤 Alice: "Lire dans les pensées!"    │
-│  💬 2 commentaires                    │
+│  💬 2 commentaires                      │
 │                                        │
-│  👤 Charlie: "Téléportation!"         │
-│  💬 1 commentaire                     │
+│  👤 Charlie: "Téléportation!"          │
+│  💬 1 commentaire                       │
 │                                        │
-│  📊 3 participants, 6 commentaires     │
-│  📸 2 médias partagés                 │
-│  🔒 Fermée - Lecture seule             │
+│  📊 3 participants, 6 commentaires      │
+│  📸 2 médias partagés                   │
+│  🔒 Fermée - Lecture seule              │
 └────────────────────────────────────────┘
 ```
-
-### ⚙️ Écrans secondaires
-
-- **Réglages groupe** : Heure locale (durée fixe 24h), notifications, type
-- **Gestion prompts locaux** : Création/édition par owner/admin uniquement
-- **Historique** : Manches passées consultables avec tout leur contenu
 
 ## ⚠️ Risques & Garde-fous
 
 ### 🔒 Risques techniques
 
-| Risque                 | Impact                | Mitigation                            |
-| ---------------------- | --------------------- | ------------------------------------- |
-| **Concurrence jobs**   | 🔴 Corruption données | Advisory locks + transitions strictes |
-| **Spam notifications** | 🟡 UX dégradée        | Préférences + `notifications_enabled` |
-| **Surcharge uploads**  | 🟡 Performance        | Limites taille + compression          |
-| **Race conditions**    | 🔴 États incohérents  | Transactions + contraintes DB         |
+| Risque                 | Impact                | Mitigation                                                     |
+| ---------------------- | --------------------- | -------------------------------------------------------------- |
+| **Concurrence jobs**   | 🔴 Corruption données | Advisory locks + transitions strictes                          |
+| **Spam notifications** | 🟡 UX dégradée        | Préférences + `notifications_enabled` + ciblage `user_devices` |
+| **Surcharge uploads**  | 🟡 Performance        | Limites taille + compression + CDN                             |
+| **Race conditions**    | 🔴 États incohérents  | Transactions + contraintes DB + horodatage explicite           |
 
 ### 🛡️ Risques produit
 
@@ -508,7 +451,7 @@ flowchart LR
 
 ### 📊 Monitoring & Alertes
 
-- **Métriques core** : Participation quotidienne, temps de réponse jobs
+- **Métriques core** : Participation quotidienne, temps d'exécution des jobs
 - **Alertes** : Échecs jobs, pics d'erreurs, goulets d'étranglement
 - **Dashboards** : Santé système, usage utilisateurs, performance
 
@@ -525,16 +468,9 @@ flowchart LR
 
 ### 👥 Rôles & Permissions
 
-| Rôle            | Permissions                                                                                           | Contraintes                                                |
-| --------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **App Creator** | Modération banque globale + administration système + accès exclusif banque globale                    | Email défini dans .env, seul accès interface admin         |
-| **Owner**       | Gestion groupe + gestion prompts locaux + modération suggestions locales (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert           |
-| **Admin**       | Gestion prompts locaux + modération suggestions locales + membres (PAS d'accès banque globale)        | Nommé par owner                                            |
-| **Member**      | Participation + interactions + suggestions (vers groupe ET vers global)                               | Rôle par défaut, aucun accès direct aux banques de prompts |
-
-### 📱 Interactions
-
-| Type             | Description                   | Symboles                         |
-| ---------------- | ----------------------------- | -------------------------------- |
-| **Commentaires** | Discussion libre              | Texte libre                      |
-| **Votes**        | Choix dans les prompts "vote" | 1 vote/round, auto-vote autorisé |
+| Rôle            | Permissions                                                                                         | Contraintes                                          |
+| --------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **App Creator** | Modération banque globale + administration système + accès exclusif banque globale                  | Email défini dans `.env`, seul accès interface admin |
+| **Owner**       | Gestion groupe + prompts locaux + modération suggestions locales (pas d'accès banque globale en v1) | Unique par groupe, non révoquable sans transfert     |
+| **Admin**       | Prompts locaux + modération suggestions locales + gestion membres                                   | Nommé par owner                                      |
+| **Member**      | Participation + interactions + suggestions (vers groupe ET vers global)                             | Par défaut                                           |
