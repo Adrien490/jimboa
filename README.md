@@ -93,12 +93,19 @@ graph LR
 - **Invitations** : Code permanent modifiable, généré automatiquement
 - **Image de profil** : Avatar personnalisable pour chaque groupe
 - **Authentification** : Google OAuth uniquement
+- **Configuration** : Email du créateur défini via `APP_CREATOR_EMAIL` dans .env
 
-### 🎯 Système de prompts
+### 🎯 Système de prompts hybride
 
-- **Types** : Question, Vote, Challenge
-- **Tagging** : Classification et filtrage
-- **Sélection** : Automatique (IA) ou manuelle
+- **Banque globale curatée** : Starter pack de prompts approuvés pour tous les groupes
+- **Prompts locaux** : Owners/admins peuvent créer des prompts spécifiques à leur groupe
+- **Clonage intelligent** : Dupliquer et personnaliser les prompts globaux localement
+- **Contributions communautaires** : Suggérer des prompts locaux réussis pour la banque globale
+- **Types** : Question, Vote, Challenge (global et local)
+- **Workflow global** : Pending → Approved/Rejected → Archived
+- **Workflow local** : Création directe par owner/admin, édition libre
+- **Tagging & filtrage** : Classification par tags, langue, difficulté
+- **Sélection** : Automatique (globaux + locaux) ou manuelle par groupe
 
 ### 💬 Interactions sociales
 
@@ -119,6 +126,24 @@ graph LR
 - **Pas de scoring** : Focus sur le partage et l'interaction
 - **Lecture seule** : Aucune interaction possible sur les manches fermées
 
+### 🛡️ Gestion des prompts
+
+#### 🌍 Prompts globaux (curatés)
+
+- **Starter pack** : Collection initiale de prompts approuvés par le créateur
+- **Contributions** : Suggestions issues des meilleurs prompts locaux
+- **Modération centralisée** : App creator valide les ajouts à la banque globale
+- **Interface d'admin** : Dashboard pour gérer la banque globale
+- **Qualité éditoriale** : Cohérence, universalité, respect des valeurs
+
+#### 🏠 Prompts locaux (liberté créative)
+
+- **Création libre** : Owners/admins créent directement pour leur groupe
+- **Clonage & personnalisation** : Adapter les prompts globaux au contexte local
+- **Événements privés** : Prompts spécifiques (anniversaires, blagues internes)
+- **Langues locales** : Adaptation linguistique et culturelle
+- **Pas de modération** : Liberté totale dans le cadre du groupe
+
 ## 🗄️ Modèle de données (ERD)
 
 ### 🔗 Relations principales
@@ -129,7 +154,14 @@ erDiagram
     groups ||--|| group_settings : "paramètres"
     groups ||--o{ group_members : "contient"
     groups ||--o{ daily_rounds : "manches"
-    prompts ||--o{ daily_rounds : "utilisé dans"
+    groups ||--o{ group_prompts : "prompts locaux"
+    global_prompts ||--o{ daily_rounds : "utilisé dans round"
+    group_prompts ||--o{ daily_rounds : "utilisé dans round"
+    global_prompts ||--o{ group_prompts : "cloné depuis"
+    group_prompts ||--o{ prompt_suggestions : "suggéré vers global"
+    profiles ||--o{ prompt_suggestions : "suggère"
+    profiles ||--o{ global_prompts : "créateur/modérateur"
+    profiles ||--o{ group_prompts : "créateur local"
     daily_rounds ||--o{ submissions : "soumissions"
     daily_rounds ||--o{ round_votes : "votes"
     profiles ||--o{ submissions : "auteur"
@@ -140,7 +172,8 @@ erDiagram
     submissions ||--o{ comments : "commentaires"
     submissions ||--o{ reactions : "réactions sur"
     comments ||--o{ reactions : "réactions sur"
-    prompts ||--o{ prompt_tag_links : "taggé"
+    global_prompts ||--o{ prompt_tag_links : "taggé"
+    group_prompts ||--o{ prompt_tag_links : "taggé"
     prompt_tags ||--o{ prompt_tag_links : "tag"
 ```
 
@@ -168,11 +201,13 @@ erDiagram
 
 #### 🎯 Prompts & Manches
 
-| Table            | Champs principaux                                                            | Contraintes                     |
-| ---------------- | ---------------------------------------------------------------------------- | ------------------------------- |
-| **prompts**      | `type` (question\|vote\|challenge), `title`, `body`, `metadata` (jsonb)      | Tags via prompt_tag_links       |
-| **daily_rounds** | `group_id`, `prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed) | UNIQUE(group_id, scheduled_for) |
-| **submissions**  | `round_id`, `author_id`, `content_text`                                      | UNIQUE(round_id, author_id)     |
+| Table                  | Champs principaux                                                                                                                                                                 | Contraintes                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **global_prompts**     | `type` (question\|vote\|challenge), `title`, `body`, `status` (pending\|approved\|rejected\|archived), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb) | Banque globale curatée, seuls les 'approved' sont visibles aux groupes |
+| **group_prompts**      | `group_id`, `type`, `title`, `body`, `is_active`, `cloned_from_global`, `created_by`, `metadata` (jsonb)                                                                          | Prompts locaux créés/clonés par owners/admins                          |
+| **prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions de prompts locaux → globaux                                |
+| **daily_rounds**       | `group_id`, `global_prompt_id`, `group_prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed)                                                                            | UNIQUE(group_id, scheduled_for), utilise soit global soit group prompt |
+| **submissions**        | `round_id`, `author_id`, `content_text`                                                                                                                                           | UNIQUE(round_id, author_id)                                            |
 
 #### 💬 Interactions
 
@@ -206,6 +241,8 @@ erDiagram
 - **Appartenance stricte** : Toute action requiert membership du groupe
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Fuseau horaire** : Planification locale, stockage UTC
+- **Modération centralisée** : Seul le créateur de l'app (APP_CREATOR_EMAIL) peut valider les prompts
+- **Prompts approuvés uniquement** : Les groupes ne peuvent sélectionner que des prompts avec status='approved'
 
 #### 🔑 Sécurité des codes d'invitation
 
@@ -458,11 +495,12 @@ flowchart LR
 
 ### 👥 Rôles & Permissions
 
-| Rôle       | Permissions                        | Contraintes                                      |
-| ---------- | ---------------------------------- | ------------------------------------------------ |
-| **Owner**  | Tout + transfert ownership         | Unique par groupe, non révoquable sans transfert |
-| **Admin**  | Gestion groupe + prompts + membres | Nommé par owner                                  |
-| **Member** | Participation + interactions       | Rôle par défaut                                  |
+| Rôle            | Permissions                                                                 | Contraintes                                      |
+| --------------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| **App Creator** | Modération banque globale + administration système                          | Email défini dans .env, accès interface admin    |
+| **Owner**       | Tout + transfert ownership + gestion prompts locaux + clonage + suggestions | Unique par groupe, non révoquable sans transfert |
+| **Admin**       | Gestion groupe + gestion prompts locaux + clonage + sélection + membres     | Nommé par owner                                  |
+| **Member**      | Participation + interactions + suggestion prompts locaux vers globaux       | Rôle par défaut                                  |
 
 ### 📱 Interactions
 
@@ -470,3 +508,37 @@ flowchart LR
 | ---------------- | ----------------------------- | ----------------------------- |
 | **Commentaires** | Discussion libre              | Texte libre                   |
 | **Votes**        | Choix dans les prompts "vote" | 1 vote/round, pas d'auto-vote |
+
+## 🗓️ Roadmap Approche Hybride
+
+### 🚀 Phase 1 - Fondations hybrides
+
+- [x] Séparer prompts globaux et locaux dans le modèle de données
+- [ ] Interface de découverte des prompts globaux (liste + tags + filtres)
+- [ ] Fonctionnalité de clonage vers prompts locaux
+- [ ] Création directe de prompts locaux par owners/admins
+- [ ] Starter pack de prompts globaux approuvés
+
+### 🎯 Phase 2 - Expérience utilisateur
+
+- [ ] Filtrage avancé (tags, langue, difficulté, type de groupe)
+- [ ] Édition locale des prompts clonés
+- [ ] Interface de gestion des prompts locaux
+- [ ] Sélection intelligente (mix global/local)
+- [ ] Preview des prompts avant sélection
+
+### 🌟 Phase 3 - Contributions communautaires
+
+- [ ] Système de suggestions (prompt local → global)
+- [ ] Interface de modération pour l'app creator
+- [ ] Analytics sur les prompts populaires
+- [ ] Workflow d'approbation avec feedback
+- [ ] Historique des contributions
+
+### 🔮 Phase 4 - Intelligence & Personnalisation
+
+- [ ] Recommandations basées sur l'historique du groupe
+- [ ] Détection automatique des prompts locaux réussis
+- [ ] Suggestions proactives de conversion vers global
+- [ ] Analytics avancés pour l'app creator
+- [ ] API pour contributions externes

@@ -459,49 +459,146 @@ Alors aucune notif "open/close_soon" n'est émise à l'échelle du groupe (les n
 
 ---
 
-## EPIC E — Prompts (banque, tags, sélection)
+## EPIC E — Prompts Hybrides (Global + Local)
 
-### E1 — Créer/éditer un prompt
+### E1 — Découvrir les prompts globaux
 
-**En tant qu'** admin/owner  
-**Je veux** ajouter un prompt (type, titre, corps, média facultatif)  
-**Afin d'** alimenter la banque
+**En tant que** owner/admin de groupe  
+**Je veux** parcourir la banque globale de prompts approuvés  
+**Afin de** découvrir des idées pour mon groupe
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand je sauvegarde
-Alors prompts est créé avec type ∈ {question,vote,challenge}
+Étant donné que je suis owner/admin d'un groupe
+Quand j'accède à "Découvrir les prompts"
+Alors je vois la liste des prompts globaux avec status='approved'
+Et je peux filtrer par type, tags
+Et je peux voir un aperçu du prompt avec ses métadonnées
+Et j'ai des boutons "Cloner dans mon groupe" et "Utiliser directement"
+```
+
+#### Règles métier
+
+- Seuls les prompts globaux approuvés sont visibles
+- Filtrage en temps réel par critères multiples
+- Interface responsive avec pagination
+- Preview complet avant action
+
+---
+
+### E2 — Cloner un prompt global vers local
+
+**En tant que** owner/admin de groupe  
+**Je veux** cloner un prompt global et le personnaliser  
+**Afin de** l'adapter au contexte de mon groupe
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un prompt global que je veux cloner
+Quand je clique "Cloner dans mon groupe"
+Alors une copie est créée dans group_prompts avec cloned_from_global=global_prompt_id
+Et je peux immédiatement modifier le titre, corps, et métadonnées
+Et le prompt cloné est marqué comme actif pour mon groupe
+Et je garde un lien vers l'original pour référence
+```
+
+#### Règles métier
+
+- Le clonage crée une copie indépendante
+- Modifications locales n'affectent pas l'original global
+- Lien de traçabilité conservé (cloned_from_global)
+- Liberté totale d'édition post-clonage
+
+---
+
+### E3 — Créer un prompt local original
+
+**En tant que** owner/admin de groupe  
+**Je veux** créer un prompt spécifique à mon groupe  
+**Afin de** personnaliser l'expérience (événements privés, blagues internes, langue locale)
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné que je suis owner/admin d'un groupe
+Quand je crée un nouveau prompt local
+Alors il est ajouté à group_prompts avec cloned_from_global=NULL
+Et il est immédiatement actif pour mon groupe
+Et je peux définir type, titre, corps, tags, métadonnées
+Et il n'apparaît que dans mon groupe (pas de modération globale)
+```
+
+#### Règles métier
+
+- Création directe sans validation (liberté locale)
+- Visible uniquement dans le groupe créateur
+- Peut être utilisé immédiatement dans les rounds
+- Possibilité de suggestion vers banque globale plus tard
+
+---
+
+### E4 — Suggérer un prompt local vers la banque globale
+
+**En tant que** membre de groupe  
+**Je veux** proposer qu'un prompt local réussi soit ajouté à la banque globale  
+**Afin de** partager une bonne idée avec toute la communauté
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un prompt local qui a généré beaucoup d'engagement dans mon groupe
+Quand je clique "Suggérer pour la banque globale"
+Alors une entrée est créée dans prompt_suggestions avec status='pending'
+Et le créateur de l'app reçoit une notification
+Et je peux ajouter un commentaire expliquant pourquoi ce prompt est intéressant
+Et je peux voir le statut de ma suggestion
+```
+
+#### Règles métier
+
+- Tout membre peut suggérer (pas seulement owner/admin)
+- Statistiques d'engagement automatiquement incluses
+- Possibilité de retirer sa suggestion avant traitement
+- Historique des suggestions par utilisateur
+
+---
+
+### E5 — Modérer les suggestions (app creator)
+
+**En tant que** créateur de l'app  
+**Je veux** examiner et traiter les suggestions de prompts locaux  
+**Afin de** enrichir la banque globale avec les meilleures contributions
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné une suggestion de prompt avec status='pending'
+Quand je l'examine dans l'interface d'admin
+Alors je vois le prompt original, les stats d'engagement, et le commentaire du suggéreur
+Et je peux approuver (crée un global_prompt), rejeter avec feedback, ou demander modifications
+Et le suggéreur reçoit une notification du résultat
+Et si approuvé, le prompt devient disponible dans la banque globale
 ```
 
 ---
 
-### E2 — Tagger un prompt
+### E6 — Gérer mes prompts locaux
 
-**En tant qu'** admin/owner  
-**Je veux** associer des tags  
-**Afin de** faciliter la sélection
-
-#### Critères d'acceptation
-
-```gherkin
-Quand j'associe {tag_ids}
-Alors prompt_tag_links crée des couples uniques
-```
-
----
-
-### E3 — Activer/désactiver un prompt
-
-**En tant qu'** admin/owner  
-**Je veux** suspendre un prompt  
-**Afin d'** éviter sa sélection
+**En tant que** owner/admin de groupe  
+**Je veux** gérer ma collection de prompts locaux  
+**Afin de** maintenir une bibliothèque organisée pour mon groupe
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand is_active=false
-Alors il ne peut pas être assigné à un nouveau round
+Étant donné mes prompts locaux (créés ou clonés)
+Quand j'accède à "Mes prompts"
+Alors je vois tous mes group_prompts avec leur origine (créé/cloné)
+Et je peux les éditer, désactiver/réactiver, ou supprimer
+Et je peux voir lesquels ont été utilisés récemment
+Et je peux organiser par tags ou filtrer par type
 ```
 
 ---
@@ -526,17 +623,21 @@ Alors un prompt non récent est choisi (diversité), et daily_rounds est planifi
 
 ---
 
-### E5 — Sélection manuelle du prompt du jour (option)
+### E7 — Sélection hybride du prompt du jour
 
-**En tant qu'** admin/owner  
-**Je veux** choisir le prompt de demain  
-**Afin de** maîtriser l'édito
+**En tant qu'** admin/owner de groupe  
+**Je veux** choisir le prompt de demain parmi mes prompts globaux ET locaux  
+**Afin de** créer l'expérience parfaite pour mon groupe
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand je fixe {group_id, date, prompt_id}
-Alors daily_rounds (UNIQUE par date/groupe) est créé/maj
+Étant donné que je planifie le prompt de demain
+Quand j'ouvre le sélecteur de prompts
+Alors je vois mes prompts locaux ET les prompts globaux mélangés
+Et je peux filtrer par origine (global/local/cloné)
+Et je peux prévisualiser chaque prompt avant sélection
+Et je peux programmer à l'avance plusieurs jours
 ```
 
 ---
