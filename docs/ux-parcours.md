@@ -156,15 +156,125 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 
 ## 🧱 Arborescence Routes (Next.js App Router)
 
-- `/` Feed multi‑groupes (Aujourd’hui en tête)
-- `/today` Focus “Aujourd’hui” tous mes groupes
-- `/groups` Liste de mes groupes
-- `/groups/[groupId]` Détail groupe
-- `/groups/[groupId]/settings` Réglages
-- `/join` ou `/join/[CODE]` Rejoindre via code
-- `/rounds/[roundId]` Vue round
-- `/activity` Mon activité
-- `/admin` Interface app creator (email = APP_CREATOR_EMAIL)
+```text
+app/
+  layout.tsx                      # layout racine (thème, fonts, toasts, Providers)
+  globals.css
+
+  favicon.ico
+  manifest.webmanifest            # PWA minimal (icônes via /public)
+  robots.txt                      # SEO (App Router)                    ← cf. docs
+  sitemap.ts                      # SEO (sitemap dynamique)            ← cf. docs
+  opengraph-image.tsx             # OG global par défaut
+
+  (marketing)/                    # Regroupe les pages publiques
+    layout.tsx
+    page.tsx                      # Landing "Jimboa"
+    privacy/page.tsx
+    terms/page.tsx
+
+  (auth)/                         # Flux d’auth Google (Supabase SSR)
+    layout.tsx
+    login/page.tsx                # Bouton "Continuer avec Google"
+    callback/route.ts             # Handler retour OAuth si nécessaire (proxy)
+    logout/route.ts               # Invalidation cookie + redirect
+    error/page.tsx
+
+  (app)/                          # Espace authentifié (require auth)
+    layout.tsx                    # Navbar, guard auth (Server Component)
+    loading.tsx
+    error.tsx
+
+    page.tsx                      # /app → redirige vers /app/feed
+    feed/
+      page.tsx                    # Agrégat multi-groupes (Aujourd'hui, J-1, J-2…)
+      loading.tsx
+    activity/
+      page.tsx                    # "Mon activité" (soumissions, commentaires, votes)
+
+    groups/
+      page.tsx                    # Liste de mes groupes + CTA créer/rejoindre
+      new/
+        page.tsx                  # Création d’un groupe
+        actions.ts                # SA: createGroup (normalise join_code UPPER)
+      join/
+        page.tsx                  # Rejoindre via code
+        actions.ts                # SA: joinWithCode
+
+      [groupId]/
+        layout.tsx                # Header groupe (image, tabs)
+        page.tsx                  # Vue d’ensemble groupe (dernier round, membres)
+
+        settings/
+          page.tsx                # Réglages (drop_time, notifications_enabled)
+          actions.ts              # SA: updateGroupSettings
+        members/
+          page.tsx                # Liste + rôles (owner/admin/member)
+          actions.ts              # SA: promote/demote/leave
+        invite/
+          page.tsx                # Code d’invitation (regenerate/disable)
+          actions.ts              # SA: regenerateJoinCode / toggleJoin
+        prompts/                  # Banque locale (owner/admin)
+          page.tsx
+          new/
+            page.tsx
+            actions.ts            # SA: createLocalPrompt
+          [promptId]/
+            page.tsx              # Détails
+            edit/
+              page.tsx
+              actions.ts          # SA: updateLocalPrompt / toggleActive
+          suggestions/            # Modération des suggestions locales (pending)
+            page.tsx
+            actions.ts            # SA: approve/reject (crée group_prompt)
+
+        rounds/
+          page.tsx                # Historique des manches (fermées/ ouvertes)
+          [roundId]/
+            page.tsx              # Écran de manche
+            opengraph-image.tsx   # OG pour partage du round
+            submit/
+              page.tsx            # Formulaire de soumission (texte + média)
+              actions.ts          # SA: createSubmission (1/user/round)
+            vote/                 # Pour les prompts type "vote"
+              page.tsx
+              actions.ts          # SA: castVote (définitif)
+            comments/
+              page.tsx            # Discussion globale (visible après participation)
+              actions.ts          # SA: addComment / editBeforeClose / deleteBeforeClose
+
+    admin/                        # Interface "app creator" (gated par email RLS)
+      layout.tsx
+      page.tsx                    # Dashboard admin global
+      prompts/
+        page.tsx                  # Banque globale (pending/approved/rejected/archived)
+        [promptId]/
+          page.tsx
+          edit/
+            page.tsx
+            actions.ts            # SA: approve/reject/archive/edit global prompt
+      suggestions/
+        page.tsx                  # Suggestions locales → global (pending)
+        actions.ts                # SA: resolveGlobalSuggestion
+
+  (api)/                          # Regroupe les handlers techniques (non indexés)
+    api/
+      cron/
+        create-rounds/route.ts    # J-1 : UPSERT rounds (idempotent)
+        open-rounds/route.ts      # J : scheduled→open (+ notifications)
+        close-rounds/route.ts     # J+1 : open→closed
+      notifications/
+        send-push/route.ts        # Worker d’envoi batch (webhook interne)
+      webhooks/
+        supabase/route.ts         # (optionnel) évts DB → traitement applicatif
+
+  (status)/
+    health/route.ts               # 200 OK (liveness)
+    ready/route.ts                # checks DB, Supabase, push provider (readiness)
+
+  not-found.tsx                   # 404 globale
+  global-error.tsx                # Erreurs non interceptées
+```
 
 ## 🎛️ Micro‑interactions & Perf
 
