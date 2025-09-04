@@ -99,7 +99,7 @@ graph LR
 
 - **Banque globale curatée** : Starter pack de prompts approuvés pour tous les groupes
 - **Prompts locaux** : Owners/admins peuvent créer des prompts spécifiques à leur groupe
-- **Clonage intelligent** : Dupliquer et personnaliser les prompts globaux localement
+- **Système de suggestions** : Proposer des prompts locaux réussis vers la banque globale
 - **Contributions communautaires** : Suggérer des prompts locaux réussis pour la banque globale
 - **Types** : Question, Vote, Challenge (global et local)
 - **Workflow global** : Pending → Approved/Rejected → Archived
@@ -109,8 +109,9 @@ graph LR
 
 ### 💬 Interactions sociales
 
-- **Soumissions** : Texte + médias (images, vidéos)
-- **Commentaires** : Discussion libre
+- **Soumissions** : Texte + médias, 1 par user/manche, visibilité immédiate, pas d'édition
+- **Suppression** : Possible pendant la fenêtre ouverte (libère le quota pour re-soumission)
+- **Commentaires** : Discussion globale sous chaque question du jour
 - **Votes** : 1 vote par manche (type "vote" uniquement)
 - **Visibilité conditionnelle** : Interactions visibles uniquement après avoir soumis sa réponse
 
@@ -130,16 +131,18 @@ graph LR
 
 #### 🌍 Prompts globaux (curatés)
 
+- **Accès exclusif** : Seul le créateur de l'app peut parcourir et gérer la banque globale
 - **Starter pack** : Collection initiale de prompts approuvés par le créateur
-- **Contributions** : Suggestions issues des meilleurs prompts locaux
+- **Contributions** : Suggestions issues des meilleurs prompts locaux (via suggestions)
 - **Modération centralisée** : App creator valide les ajouts à la banque globale
-- **Interface d'admin** : Dashboard pour gérer la banque globale
+- **Interface d'admin** : Dashboard exclusif au créateur pour gérer la banque globale
 - **Qualité éditoriale** : Cohérence, universalité, respect des valeurs
 
 #### 🏠 Prompts locaux (liberté créative)
 
+- **Accès restreint** : Seuls les owners/admins peuvent parcourir et gérer la banque locale de leur groupe
 - **Création libre** : Owners/admins créent directement pour leur groupe
-- **Clonage & personnalisation** : Adapter les prompts globaux au contexte local
+- **Pas de clonage direct** : Les prompts globaux ne sont plus directement clonables (accès restreint)
 - **Événements privés** : Prompts spécifiques (anniversaires, blagues internes)
 - **Langues locales** : Adaptation linguistique et culturelle
 - **Pas de modération** : Liberté totale dans le cadre du groupe
@@ -168,8 +171,8 @@ erDiagram
     profiles ||--o{ comments : "commentaire"
     profiles ||--o{ reactions : "réaction"
     profiles ||--o{ round_votes : "voteur"
+    daily_rounds ||--o{ comments : "discussion globale"
     submissions ||--o{ submission_media : "médias"
-    submissions ||--o{ comments : "commentaires"
     submissions ||--o{ reactions : "réactions sur"
     comments ||--o{ reactions : "réactions sur"
     global_prompts ||--o{ prompt_tag_links : "taggé"
@@ -213,7 +216,7 @@ erDiagram
 
 | Table           | Champs principaux                        | Contraintes                                     |
 | --------------- | ---------------------------------------- | ----------------------------------------------- |
-| **comments**    | `submission_id`, `author_id`, `body`     | -                                               |
+| **comments**    | `round_id`, `author_id`, `body`          | Discussion globale sur la question du jour      |
 | **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id), CHECK(voter≠target) |
 
 #### 🔔 Notifications
@@ -228,13 +231,14 @@ erDiagram
 
 #### 🎯 Règles de participation
 
-| Contrainte                    | Description                   | Implémentation                                                    |
-| ----------------------------- | ----------------------------- | ----------------------------------------------------------------- |
-| **1 round/jour/groupe**       | Unicité quotidienne           | `UNIQUE(group_id, scheduled_for)`                                 |
-| **1 soumission/user/round**   | Une participation par manche  | `UNIQUE(round_id, author_id)`                                     |
-| **1 vote/user/round**         | Vote unique, pas d'auto-vote  | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
-| **Visibilité immédiate**      | Pas de mode "blind"           | Soumissions visibles dès publication                              |
-| **Visibilité conditionnelle** | Interactions après soumission | Commentaires/votes visibles après avoir soumis sa réponse         |
+| Contrainte                        | Description                                  | Implémentation                                                    |
+| --------------------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| **1 round/jour/groupe**           | Unicité quotidienne                          | `UNIQUE(group_id, scheduled_for)`                                 |
+| **1 soumission/user/round**       | Une participation par manche, pas d'édition  | `UNIQUE(round_id, author_id)`                                     |
+| **Suppression = nouvelle chance** | Supprimer libère le quota pour re-soumission | Suppression possible uniquement pendant round ouvert              |
+| **1 vote/user/round**             | Vote unique, pas d'auto-vote                 | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
+| **Visibilité immédiate**          | Pas de mode "blind"                          | Soumissions visibles dès publication                              |
+| **Visibilité conditionnelle**     | Interactions après soumission                | Commentaires/votes visibles après avoir soumis sa réponse         |
 
 #### 🔐 Règles de sécurité
 
@@ -422,10 +426,18 @@ flowchart LR
 │  📝 SOUMISSIONS (temps réel)           │
 │                                        │
 │  👤 Alice: "Lire dans les pensées!"    │
-│  💬 2 commentaires                    │
-│                                        │
 │  👤 Bob: "Voler comme Superman"       │
-│  💬 1 commentaire                     │
+│  👤 Charlie: "Téléportation!"         │
+├────────────────────────────────────────┤
+│  🗳️ VOTES (si applicable)              │
+│  👤 Alice: 2 votes                    │
+│  👤 Bob: 1 vote                       │
+├────────────────────────────────────────┤
+│  💬 DISCUSSION GLOBALE                 │
+│                                        │
+│  👤 Alice: "Excellent choix Bob!"      │
+│  👤 Charlie: "Moi j'hésite encore..."  │
+│  [ 💬 Ajouter un commentaire ]         │
 └────────────────────────────────────────┘
 ```
 
@@ -495,12 +507,12 @@ flowchart LR
 
 ### 👥 Rôles & Permissions
 
-| Rôle            | Permissions                                                                 | Contraintes                                      |
-| --------------- | --------------------------------------------------------------------------- | ------------------------------------------------ |
-| **App Creator** | Modération banque globale + administration système                          | Email défini dans .env, accès interface admin    |
-| **Owner**       | Tout + transfert ownership + gestion prompts locaux + clonage + suggestions | Unique par groupe, non révoquable sans transfert |
-| **Admin**       | Gestion groupe + gestion prompts locaux + clonage + sélection + membres     | Nommé par owner                                  |
-| **Member**      | Participation + interactions + suggestion prompts locaux vers globaux       | Rôle par défaut                                  |
+| Rôle            | Permissions                                                                        | Contraintes                                         |
+| --------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **App Creator** | Modération banque globale + administration système + accès exclusif banque globale | Email défini dans .env, seul accès interface admin  |
+| **Owner**       | Gestion groupe + gestion prompts locaux + suggestions (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert    |
+| **Admin**       | Gestion prompts locaux + sélection + membres (PAS d'accès banque globale)          | Nommé par owner                                     |
+| **Member**      | Participation + interactions + suggestion prompts locaux vers globaux              | Rôle par défaut, aucun accès aux banques de prompts |
 
 ### 📱 Interactions
 

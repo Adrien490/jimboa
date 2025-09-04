@@ -461,59 +461,33 @@ Alors aucune notif "open/close_soon" n'est émise à l'échelle du groupe (les n
 
 ## EPIC E — Prompts Hybrides (Global + Local)
 
-### E1 — Découvrir les prompts globaux
+### E1 — Gérer la banque globale (app creator uniquement)
 
-**En tant que** owner/admin de groupe  
-**Je veux** parcourir la banque globale de prompts approuvés  
-**Afin de** découvrir des idées pour mon groupe
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné que je suis owner/admin d'un groupe
-Quand j'accède à "Découvrir les prompts"
-Alors je vois la liste des prompts globaux avec status='approved'
-Et je peux filtrer par type, tags
-Et je peux voir un aperçu du prompt avec ses métadonnées
-Et j'ai des boutons "Cloner dans mon groupe" et "Utiliser directement"
-```
-
-#### Règles métier
-
-- Seuls les prompts globaux approuvés sont visibles
-- Filtrage en temps réel par critères multiples
-- Interface responsive avec pagination
-- Preview complet avant action
-
----
-
-### E2 — Cloner un prompt global vers local
-
-**En tant que** owner/admin de groupe  
-**Je veux** cloner un prompt global et le personnaliser  
-**Afin de** l'adapter au contexte de mon groupe
+**En tant que** créateur de l'app  
+**Je veux** parcourir et gérer la banque globale de prompts  
+**Afin de** maintenir un catalogue de qualité pour tous les groupes
 
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné un prompt global que je veux cloner
-Quand je clique "Cloner dans mon groupe"
-Alors une copie est créée dans group_prompts avec cloned_from_global=global_prompt_id
-Et je peux immédiatement modifier le titre, corps, et métadonnées
-Et le prompt cloné est marqué comme actif pour mon groupe
-Et je garde un lien vers l'original pour référence
+Étant donné que je suis le créateur de l'app (identifié par email .env)
+Quand j'accède à l'interface d'admin
+Alors je vois tous les prompts globaux (tous statuts confondus)
+Et je peux filtrer par statut, type, tags
+Et je peux créer, éditer, approuver, rejeter, archiver
+Et je peux voir les statistiques d'usage dans les groupes
+Et je peux gérer les suggestions en attente
 ```
 
 #### Règles métier
 
-- Le clonage crée une copie indépendante
-- Modifications locales n'affectent pas l'original global
-- Lien de traçabilité conservé (cloned_from_global)
-- Liberté totale d'édition post-clonage
+- Accès exclusivement réservé au créateur de l'app
+- Aucun autre utilisateur ne peut parcourir la banque globale
+- Interface d'administration complète avec toutes les actions
 
 ---
 
-### E3 — Créer un prompt local original
+### E2 — Créer un prompt local original
 
 **En tant que** owner/admin de groupe  
 **Je veux** créer un prompt spécifique à mon groupe  
@@ -523,23 +497,24 @@ Et je garde un lien vers l'original pour référence
 
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
-Quand je crée un nouveau prompt local
+Quand je crée un nouveau prompt local depuis "Mes prompts locaux"
 Alors il est ajouté à group_prompts avec cloned_from_global=NULL
 Et il est immédiatement actif pour mon groupe
 Et je peux définir type, titre, corps, tags, métadonnées
 Et il n'apparaît que dans mon groupe (pas de modération globale)
+Et seuls les owners/admins peuvent le voir dans l'interface de gestion
 ```
 
 #### Règles métier
 
 - Création directe sans validation (liberté locale)
 - Visible uniquement dans le groupe créateur
-- Peut être utilisé immédiatement dans les rounds
+- Accès à l'interface de création restreint aux owners/admins
 - Possibilité de suggestion vers banque globale plus tard
 
 ---
 
-### E4 — Suggérer un prompt local vers la banque globale
+### E3 — Suggérer un prompt local vers la banque globale
 
 **En tant que** membre de groupe  
 **Je veux** proposer qu'un prompt local réussi soit ajouté à la banque globale  
@@ -565,7 +540,7 @@ Et je peux voir le statut de ma suggestion
 
 ---
 
-### E5 — Modérer les suggestions (app creator)
+### E4 — Modérer les suggestions (app creator)
 
 **En tant que** créateur de l'app  
 **Je veux** examiner et traiter les suggestions de prompts locaux  
@@ -584,49 +559,10 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 
 ---
 
-### E6 — Gérer mes prompts locaux
+### E5 — Sélectionner le prompt du jour (owner/admin)
 
-**En tant que** owner/admin de groupe  
-**Je veux** gérer ma collection de prompts locaux  
-**Afin de** maintenir une bibliothèque organisée pour mon groupe
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné mes prompts locaux (créés ou clonés)
-Quand j'accède à "Mes prompts"
-Alors je vois tous mes group_prompts avec leur origine (créé/cloné)
-Et je peux les éditer, désactiver/réactiver, ou supprimer
-Et je peux voir lesquels ont été utilisés récemment
-Et je peux organiser par tags ou filtrer par type
-```
-
----
-
-### E4 — Sélection automatique du prompt du jour (option)
-
-**En tant que** système  
-**Je veux** choisir un prompt pertinent  
-**Afin de** maintenir variété et adéquation
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné la banque active + tags du groupe
-Quand le scheduler prépare J+1
-Alors un prompt non récent est choisi (diversité), et daily_rounds est planifié
-```
-
-#### Règles métier
-
-- Éviter répétition récente (fenêtre glissante)
-
----
-
-### E7 — Sélection hybride du prompt du jour
-
-**En tant qu'** admin/owner de groupe  
-**Je veux** choisir le prompt de demain parmi mes prompts globaux ET locaux  
+**En tant qu'** owner/admin de groupe  
+**Je veux** choisir le prompt de demain parmi mes prompts locaux  
 **Afin de** créer l'expérience parfaite pour mon groupe
 
 #### Critères d'acceptation
@@ -634,11 +570,18 @@ Alors un prompt non récent est choisi (diversité), et daily_rounds est planifi
 ```gherkin
 Étant donné que je planifie le prompt de demain
 Quand j'ouvre le sélecteur de prompts
-Alors je vois mes prompts locaux ET les prompts globaux mélangés
-Et je peux filtrer par origine (global/local/cloné)
+Alors je vois uniquement mes prompts locaux actifs (group_prompts)
+Et je peux filtrer par type, tags, ou récence d'utilisation
 Et je peux prévisualiser chaque prompt avant sélection
 Et je peux programmer à l'avance plusieurs jours
+Et je peux activer la sélection automatique parmi mes prompts locaux
 ```
+
+#### Règles métier
+
+- Accès uniquement aux prompts locaux du groupe
+- Pas d'accès aux prompts globaux pour la sélection
+- Sélection manuelle ou automatique parmi les prompts locaux uniquement
 
 ---
 
@@ -711,6 +654,8 @@ Alors status='closed'
 
 ## EPIC G — Soumissions
 
+> **Principe** : 1 soumission par user & par manche (visible immédiate). Pas d'édition après création. Suppression possible pendant la fenêtre ouverte (libère le quota).
+
 ### G1 — Créer une soumission (1 par user)
 
 **En tant que** membre  
@@ -723,43 +668,24 @@ Alors status='closed'
 Étant donné un round open
 Quand je poste
 Alors submissions est créé avec (round_id, author_id) unique
+Et la soumission est visible immédiatement par tous les membres du groupe
+Et je ne peux plus créer d'autre soumission pour ce round
 ```
 
 #### Règles métier
 
-- La soumission est visible immédiatement
+- La soumission est visible immédiatement (pas de mode "blind")
+- Pas d'édition possible après création
+- Une seule soumission par utilisateur par round
 
 #### Cas limites
 
-- Tentative 2e soumission ⇒ rejet
+- Tentative 2e soumission ⇒ rejet avec message explicite
+- Round fermé ⇒ création impossible
 
 ---
 
-### G2 — Éditer ma soumission avant fermeture (optionnel)
-
-**En tant que** membre  
-**Je veux** corriger/compléter  
-**Afin d'** améliorer ma réponse
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un round open et une submission m'appartenant
-Quand je modifie
-Alors updated_at est rafraîchi
-```
-
-#### Règles métier
-
-- Après close_at ⇒ verrouillé
-
-#### Cas limites
-
-- Type "vote" sans soumission ⇒ non applicable
-
----
-
-### G3 — Supprimer ma soumission pendant la fenêtre
+### G2 — Supprimer ma soumission pendant la fenêtre
 
 **En tant que** membre  
 **Je veux** retirer ma réponse  
@@ -816,50 +742,61 @@ Alors les médias s'affichent avec lecteurs/miniatures adaptés
 
 ## EPIC I — Commentaires
 
-### I1 — Commenter une soumission
+> **Principe** : Discussion globale sous chaque question du jour. Les commentaires sont liés au round (question) et non aux soumissions individuelles. Tous les membres peuvent participer à la discussion commune.
+
+### I1 — Commenter sur la question du jour
 
 **En tant que** membre  
-**Je veux** commenter  
-**Afin d'** interagir
+**Je veux** commenter globalement sur la question du jour  
+**Afin de** participer à la discussion collective du groupe
 
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné une soumission
-Quand je publie un commentaire
-Alors comments {submission_id, author_id, body} est créé
+Étant donné un round ouvert et que j'ai soumis ma réponse
+Quand je publie un commentaire sur la question du jour
+Alors comments {round_id, author_id, body} est créé
+Et le commentaire apparaît dans la discussion globale sous la question
+Et tous les membres du groupe peuvent le voir
 ```
 
 #### Règles métier
 
-- Visible immédiatement
+- Commentaires visibles uniquement après avoir soumis sa propre réponse
+- Discussion globale commune à tous les membres
+- Visible immédiatement après publication
+- Ordre chronologique d'affichage
 
 #### Cas limites
 
 - Non-membre du groupe ⇒ refus
+- Pas encore soumis de réponse ⇒ commentaires masqués
 
 ---
 
 ### I2 — Éditer/supprimer mon commentaire avant fermeture
 
 **En tant que** membre  
-**Je veux** corriger/retirer  
-**Afin de** gérer mon contenu
+**Je veux** corriger ou retirer mon commentaire  
+**Afin de** gérer mon contenu dans la discussion globale
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand j'édite avant que le round soit closed
-Alors updated_at bouge
+Étant donné un commentaire que j'ai publié sur un round ouvert
+Quand j'édite mon commentaire
+Alors updated_at est mis à jour et le commentaire modifié apparaît dans la discussion
 
-Quand je supprime avant que le round soit closed
-Alors le commentaire disparaît
+Quand je supprime mon commentaire avant fermeture du round
+Alors le commentaire disparaît de la discussion globale
+Et les autres membres ne le voient plus
 ```
 
 #### Règles métier
 
-- Modification impossible après fermeture du round
+- Modification/suppression impossible après fermeture du round
 - Seul l'auteur peut éditer/supprimer son commentaire
+- Les commentaires restent dans l'ordre chronologique après édition
 
 ---
 
