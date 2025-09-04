@@ -1,4 +1,4 @@
-# 🎨 Parcours UX V1
+# 🎨 Parcours UX PWA 2025
 
 ## 🧭 Information Architecture
 
@@ -8,6 +8,13 @@
 - Création/Jointure: Créer un groupe, rejoindre via code
 - Préférences: Préférences par groupe (mute/push)
 - Admin: Modération (soft delete), rôles, nom/image
+
+## 🎯 Objectifs & Principes
+
+- Push‑only, pas d’email ni de rappel
+- Visibilité conditionnelle (RLS): contenu visible après participation (soumission OU vote)
+- 1 manche/jour/groupe, heure française fixe; fallback si aucun prompt actif
+- PWA first: installable, performante, résiliente hors‑ligne
 
 ## 🚀 Onboarding & Auth (Google)
 
@@ -80,6 +87,7 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 - Éditeur simple: texte + “Ajouter média”
 - Validations: image ≤ 5MB (jpeg/png/webp), vidéo ≤ 25MB (mp4 H.264/AAC), audio ≤ 10MB (mp3/m4a)
 - Upload: barre de progression, reprise sur erreur (idempotent)
+- Résilience: tentative de Background Sync si dispo; sinon retry manuel guidé
 
 ## 💬 Commentaires
 - Discussion globale par manche
@@ -93,7 +101,7 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 
 ## 🔔 Notifications & Préférences (push‑only)
 - Par groupe: `mute` (bloque tout push) et `push` (on/off)
-- Permission push: bannière d’activation si désactivée
+- Permissions push: approche progressive (proposer après 1–2 participations, pas au 1er écran)
 - Pas d’email, pas de rappel
 
 ## 👥 Détail Groupe & Réglages
@@ -108,6 +116,23 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 ## 🛡️ Modération (owner/admin)
 - Soft delete sur soumissions/commentaires (masquage pour tous)
 - Traçabilité: `deleted_by_admin`, `deleted_at`
+
+## 📲 PWA — Essentiels
+
+- App Shell léger + Server Components; budget JS initial < 100KB
+- Manifest complet (`display=standalone`, icônes, thème); shortcuts “Aujourd’hui”, “Mon groupe”
+- Offline‑first utile: cache des 3 derniers jours du feed + pages de rounds fermés; fallback hors‑ligne élégant
+- Web Share Target: partager une image/du texte dans “Ajouter à ma réponse (aujourd’hui)”
+- Service Worker:
+  - Precaching App Shell et assets
+  - Runtime caching (stale‑while‑revalidate) pour images Storage signées
+  - Push handler (type `round_open`) → badging + deep‑link `/today` ou `/rounds/[id]`
+  - Background Sync pour uploads quand dispo
+
+## 🔗 Deep Links & Shortcuts
+
+- `jimboa.fr/join/[CODE]` pour rejoindre directement un groupe
+- Shortcut “Aujourd’hui” → `/today`, “Mon groupe” → `/groups/[id]`
 
 ## 🧩 Navigation
 - Mobile: Feed / Groupes / Nouveau / Profil
@@ -128,3 +153,31 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 - Hiérarchie: Prompt → Soumissions → Discussion → Votes
 - État: statut de la manche toujours visible
 - Navigation: accès rapide aux archives et au filtre groupe
+
+## 🧱 Arborescence Routes (Next.js App Router)
+
+- `/` Feed multi‑groupes (Aujourd’hui en tête)
+- `/today` Focus “Aujourd’hui” tous mes groupes
+- `/groups` Liste de mes groupes
+- `/groups/[groupId]` Détail groupe
+- `/groups/[groupId]/settings` Réglages
+- `/join` ou `/join/[CODE]` Rejoindre via code
+- `/rounds/[roundId]` Vue round
+- `/activity` Mon activité
+- `/admin` Interface app creator (email = APP_CREATOR_EMAIL)
+
+## 🎛️ Micro‑interactions & Perf
+
+- Skeletons pour feed/round; placeholders médias; toasts (soumis, voté, commenté)
+- Prefetch ciblé (hover/touch); lazy images; CSS critical path
+- Minutage: timers synchronisés sur UTC, affichage heure France
+
+## ♿ Accessibilité
+
+- Contrastes AA, focus visibles, labels explicites
+- Préférence “reduce motion”; lecteurs médias natifs accessibles
+
+## 📈 Observabilité & Analytics
+
+- Web Vitals (TTFB, LCP, INP), erreurs JS, taux d’échec upload
+- Produit: taux de participation/jour, opt‑in push, rétention multi‑jours
