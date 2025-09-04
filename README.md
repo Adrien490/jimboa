@@ -538,35 +538,3 @@ flowchart LR
 | ---------------- | ----------------------------- | -------------------------------- |
 | **Commentaires** | Discussion libre              | Texte libre                      |
 | **Votes**        | Choix dans les prompts "vote" | 1 vote/round, auto-vote autorisé |
-
-## 🗓️ Roadmap Approche Hybride
-
-### 🚀 Phase 1 - Fondations hybrides
-
-- [x] Séparer prompts globaux et locaux dans le modèle de données
-- [ ] Interface de découverte des prompts globaux (liste + tags + filtres)
-- [ ] Fonctionnalité de clonage vers prompts locaux
-- [ ] Création directe de prompts locaux par owners/admins
-- [ ] Starter pack de prompts globaux approuvés
-
-### 🎯 Phase 2 - Expérience utilisateur
-
-- [ ] Filtrage avancé (tags, langue, difficulté, type de groupe)
-- [ ] Édition locale des prompts clonés
-- [ ] Interface de gestion des prompts locaux
-- [ ] Sélection intelligente (mix global/local)
-- [ ] Preview des prompts avant sélection
-
-### 🌟 Phase 3 - Contributions communautaires
-
-- [ ] Système de suggestions (prompt local → global)
-- [ ] Interface de modération pour l'app creator
-- [ ] Workflow d'approbation avec feedback
-- [ ] Historique des contributions
-
-### 🔮 Phase 4 - Intelligence & Personnalisation
-
-- [ ] Recommandations basées sur l'historique du groupe
-- [ ] Détection automatique des prompts locaux réussis
-- [ ] Suggestions proactives de conversion vers global
-- [ ] API pour contributions externes
