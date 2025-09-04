@@ -38,6 +38,8 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 [ Filtrer par groupe ▾ ]
 ```
 
+- Clic sur un groupe dans la liste/Feed → ouvre directement la manche du jour de ce groupe (si `open`), sinon la manche programmée (scheduled) associée à aujourd’hui.
+
 ## 🎯 Round — états clés
 
 ### Scheduled (J‑1)
@@ -113,6 +115,8 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
   - rôles (promouvoir/dépromouvoir)
   - supprimer groupe (confirmation + conséquences)
 
+Note: l’entrée de groupe par défaut redirige vers la manche du jour; l’aperçu du groupe reste accessible via un onglet/route "overview" dédié.
+
 ## 🛡️ Modération (owner/admin)
 - Soft delete sur soumissions/commentaires (masquage pour tous)
 - Traçabilité: `deleted_by_admin`, `deleted_at`
@@ -132,7 +136,7 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 ## 🔗 Deep Links & Shortcuts
 
 - `jimboa.fr/join/[CODE]` pour rejoindre directement un groupe
-- Shortcut “Aujourd’hui” → `/today`, “Mon groupe” → `/groups/[id]`
+- Shortcut “Aujourd’hui” → `/today`, “Mon groupe (du jour)” → `/app/groups/[id]/current`
 
 ## 🧩 Navigation
 - Mobile: Feed / Groupes / Nouveau / Profil
@@ -203,7 +207,9 @@ app/
 
       [groupId]/
         layout.tsx                # Header groupe (image, tabs)
-        page.tsx                  # Vue d’ensemble groupe (dernier round, membres)
+        page.tsx                  # Redirect → rounds/current (manche du jour)
+        overview/
+          page.tsx                # Vue d’ensemble groupe (dernier round, membres)
 
         settings/
           page.tsx                # Réglages (drop_time, notifications_enabled)
@@ -230,6 +236,8 @@ app/
 
         rounds/
           page.tsx                # Historique des manches (fermées/ ouvertes)
+          current/
+            page.tsx              # Résolution manche du jour (open ou scheduled) → redirect /rounds/[roundId]
           [roundId]/
             page.tsx              # Écran de manche
             opengraph-image.tsx   # OG pour partage du round
