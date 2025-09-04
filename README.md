@@ -17,7 +17,7 @@
 - [✨ Fonctionnalités clés](docs/game-rules.md#-fonctionnalités-clés-périmètre-v1)
 - [🗄️ Modèle de données](docs/data-model.md)
 - [🔔 Notifications](docs/notifications.md)
-- [📝 User Stories](user-stories.md)
+- [📝 User Stories](docs/user-stories.md)
 - [⚙️ Workflow d'orchestration](docs/workflows.md)
 - [🎨 Parcours UX](docs/ux-parcours.md)
 - [🗓️ Roadmap](docs/roadmap.md)
