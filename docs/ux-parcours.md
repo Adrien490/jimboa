@@ -29,8 +29,6 @@ flowchart LR
 │  • Les réponses des autres membres     │
 │  • La discussion du groupe             │
 │  • Les votes (si applicable)           │
-│                                        │
-│  👥 3 membres ont déjà participé       │
 └────────────────────────────────────────┘
 ```
 
@@ -88,7 +86,7 @@ flowchart LR
 
 - **Mystère initial** : Le contenu est masqué jusqu'à la participation
 - **Révélation progressive** : Dévoilement après soumission de sa propre réponse
-- **Incitation claire** : Indication du nombre de participants pour créer l'envie
+- **Incitation claire** : Message d'encouragement à participer sans révéler d'informations
 
 ### Engagement quotidien
 

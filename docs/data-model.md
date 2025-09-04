@@ -137,9 +137,17 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 
 **Invariant simple** :
 
-- Création d'un round pour le jour J à J-1, à l'heure `drop_time` (heure française)
-- Condition : s'il n'existe pas encore de `daily_round` pour `(group_id, scheduled_for_local_date=J)`
-- Jobs en at-least-once + idempotence (fréquence: toutes les 5-10 min)
+- **Création J à J-1** : Un round pour le jour J est créé la veille (J-1) à l'heure `drop_time`
+- **Condition unique** : s'il n'existe pas encore de `daily_round` pour `(group_id, scheduled_for_local_date=J)`
+- **Jobs fréquents** : Toutes les 5-10 min en at-least-once + idempotence
+- **Pas de dépendance** : Aucune relation avec l'heure de fermeture de la manche précédente
+
+**Avantages** :
+
+- ✅ **Simplicité** : Une seule règle claire
+- ✅ **Prévisibilité** : Création systématique pour chaque jour français
+- ✅ **Robustesse** : Pas de dérive temporelle
+- ✅ **Idempotence** : Peut tourner à haute fréquence sans risque
 
 **Migration** : remplacer toutes les mentions "24h après fermeture" par "un round par jour français à l'heure drop_time"
 
@@ -164,10 +172,10 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 
 ### Politiques de visibilité
 
-- **`submissions`** : Visibles si le round est fermé OU si l'utilisateur a déjà soumis sa réponse
-- **`comments`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
-- **`reactions`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
-- **`round_votes`** : Visibles si le round est fermé OU si l'utilisateur a soumis dans ce round
+- **`submissions`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
+- **`comments`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
+- **`reactions`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
+- **`round_votes`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
 
 ### Mécanisme de gamification
 
@@ -177,6 +185,33 @@ Cette approche crée un **effet de mystère** qui encourage la participation :
 2. Il doit soumettre sa propre réponse pour débloquer le contenu
 3. Une fois sa réponse soumise, tout devient visible en temps réel
 4. Après fermeture du round, tout reste consultable par tous les membres
+
+### Implémentation RLS unifiée
+
+**Fonction de participation** :
+
+```sql
+CREATE OR REPLACE FUNCTION user_has_participated(round_id UUID, user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM submissions s WHERE s.round_id = $1 AND s.author_id = $2
+  ) OR EXISTS (
+    SELECT 1 FROM round_votes v WHERE v.round_id = $1 AND v.voter_id = $2
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Politique RLS type** :
+
+```sql
+-- Exemple pour comments
+USING (
+  (SELECT status FROM daily_rounds WHERE id = round_id) = 'closed'
+  OR user_has_participated(round_id, auth.uid())
+)
+```
 
 ## 🔐 Triggers de contrôle temporel
 

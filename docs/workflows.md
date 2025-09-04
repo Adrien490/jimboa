@@ -7,7 +7,7 @@
 - **Durée fixe** : `close_at = ZonedDateTime(date_française+1, drop_time, "Europe/Paris")`
 - **Locks** : advisory lock par `group_id` pour éviter les doubles transitions
 
-## 📅 Création planifiée (toutes les heures)
+## 📅 Création planifiée (toutes les 5-10 min)
 
 **Objectif** : Créer automatiquement une nouvelle manche `scheduled` pour les groupes éligibles.
 

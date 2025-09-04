@@ -480,7 +480,7 @@ Et le système gère la création/ouverture/fermeture sans intervention
 
 ```gherkin
 Quand notifications_enabled=false
-Alors aucune notif "open/close_soon" n'est émise à l'échelle du groupe (les notifs sociales restent régies par prefs individuels si implémentées)
+Alors aucune notif "round_open" n'est émise à l'échelle du groupe (les notifs sociales restent régies par prefs individuels si implémentées)
 ```
 
 ---
@@ -801,31 +801,36 @@ Et je ne peux plus créer d'autre soumission pour ce round
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné un utilisateur qui n'a pas encore soumis dans un round ouvert
+Étant donné un utilisateur qui n'a pas encore participé dans un round ouvert
 Quand il tente de consulter les soumissions/commentaires/votes/réactions
 Alors les requêtes SELECT retournent des résultats vides (RLS bloque)
 
-Étant donné un utilisateur qui a soumis dans un round ouvert
+Étant donné un utilisateur qui a participé dans un round ouvert (soumission OU vote)
 Quand il consulte les interactions du round
 Alors il voit toutes les soumissions, commentaires, votes et réactions
 
 Étant donné un round fermé (status='closed')
 Quand n'importe quel membre du groupe consulte les interactions
 Alors tout est visible (pas de restriction RLS)
+
+Étant donné un round type='vote' ouvert
+Quand je vote sans avoir soumis de soumission
+Alors je vois toutes les interactions du round (vote = participation)
 ```
 
 #### Règles métier
 
 - **RLS activé** sur `submissions`, `comments`, `reactions`, `round_votes`
-- **Condition de visibilité** : `round.status='closed'` OU `EXISTS(ma_soumission_dans_ce_round)`
-- **Performances** : Index sur `(round_id, author_id)` pour les requêtes RLS
+- **Condition de visibilité unifiée** : `round.status='closed'` OU `user_has_participated(round_id, auth.uid())`
+- **Participation définie comme** : `EXISTS(ma_soumission)` OU `EXISTS(mon_vote)`
+- **Performances** : Index sur `(round_id, author_id)` et `(round_id, voter_id)` pour les requêtes RLS
 - **Cohérence** : Même logique RLS pour toutes les tables d'interactions
 
 #### Cas limites
 
-- **Pas de soumission** dans le round ⇒ aucune interaction visible
+- **Pas de participation** dans le round ⇒ aucune interaction visible
 - **Round fermé** ⇒ tout devient visible immédiatement
-- **Suppression de ma soumission** ⇒ les interactions redeviennent invisibles (si implémentée)
+- **Suppression admin de ma soumission/vote** ⇒ les interactions restent visibles (participation conservée)
 
 ---
 
@@ -1237,7 +1242,7 @@ Alors le trigger laisse passer (pas de blocage)
 
 - **Index partiel performant** : Seulement sur `(group_id)` pour `role='owner' AND status='active'`
 - **Fonction trigger** : `ensure_owner_presence()` vérifie les autres owners actifs
-- **Exception transfert** : Autorise temporairement 2 owners dans une transaction atomique
+- **Transaction atomique** : UPDATE multi-lignes sans état transitoire à 2 owners
 - **Protection UPDATE** : Si `OLD.role='owner'` et `NEW.role!='owner'` ou `NEW.status!='active'`
 - **Protection DELETE** : Si `OLD.role='owner' AND OLD.status='active'`
 
@@ -1302,48 +1307,6 @@ Et je peux interagir (commenter, voter si applicable)
 #### Cas limites
 
 - Les soumissions sont définitives et ne peuvent pas être supprimées
-
----
-
-## EPIC M — Intégrité & Accès
-
-### M1 — Empêcher actions hors groupe
-
-**En tant que** système  
-**Je veux** valider l'appartenance  
-**Afin de** protéger le groupe
-
-#### Critères d'acceptation
-
-```gherkin
-Quand un user tente submit/comment/react/vote
-Alors vérifier qu'il est membre du group_id du round cible, sinon refuser
-```
-
----
-
-### M2 — Owner unique toujours membre (invariant)
-
-**En tant que** système  
-**Je veux** forcer l'inclusion de l'owner unique  
-**Afin de** garantir la gouvernance
-
-#### Critères d'acceptation
-
-```gherkin
-Quand un groupe est créé ou owner_id change
-Alors l'owner est présent dans group_members(role='owner')
-Et il ne peut y avoir qu'un seul membre avec role='owner'
-```
-
-#### Règles métier
-
-- Exactement 1 owner par groupe (contrainte d'unicité)
-
-#### Cas limites
-
-- Tentative de retrait de l'owner unique ⇒ refuser
-- Tentative de promotion de deux owners simultanément ⇒ refuser
 
 ---
 
@@ -1505,7 +1468,7 @@ Alors je peux choisir entre suppression physique ou soft delete
 
 ```gherkin
 Quand je quitte G
-Alors les envois "open/close_soon" pour G ne me ciblent plus
+Alors les envois "round_open" pour G ne me ciblent plus
 ```
 
 ---
