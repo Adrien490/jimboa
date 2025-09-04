@@ -106,7 +106,7 @@ Alors un user_devices est créé/actualisé (unique par token)
 
 ---
 
-### B2 — Préférences de push par groupe
+### B2 — Préférences par groupe (mute/push)
 
 **En tant que** membre  
 **Je veux** couper le push sur certains groupes  
@@ -116,8 +116,12 @@ Alors un user_devices est créé/actualisé (unique par token)
 
 ```gherkin
 Étant donné un groupe G
-Quand je mets mute=true ou push=false
-Alors aucune notification de G ne m'est envoyée
+Quand je mets mute=true
+Alors aucune notification (push ni email) de G ne m'est envoyée
+
+Étant donné un groupe G
+Quand je mets push=false
+Alors je reçois les notifications de G par email uniquement (pas de push)
 ```
 
 #### Règles métier
@@ -137,7 +141,9 @@ Alors aucune notification de G ne m'est envoyée
 ```gherkin
 Étant donné un daily_round qui passe open
 Quand le scheduler l'ouvre
-Alors une notif "round_open" est envoyée aux membres, sauf si group_settings.notifications_enabled=false ou user_group_prefs.push=false
+Alors une notification "round_open" est émise pour chaque membre non-mute du groupe si group_settings.notifications_enabled=true
+Et si user_group_prefs.push=true alors une push est envoyée (et un email)
+Et si user_group_prefs.push=false alors seul un email est envoyé (pas de push)
 ```
 
 ---
@@ -371,11 +377,11 @@ Et updated_at du groupe est rafraîchi
 Quand je upload une nouvelle image de profil
 Alors image_path est mis à jour avec le nouveau chemin
 Et updated_at du groupe est rafraîchi
-Et l'ancienne image est supprimée du storage (si elle existe)
+Et l'ancienne image est supprimée du storage en arrière-plan (si elle existe)
 
 Quand je supprime l'image de profil
 Alors image_path devient NULL
-Et l'image est supprimée du storage
+Et l'image est supprimée du storage en arrière-plan
 ```
 
 #### Règles métier
@@ -705,6 +711,8 @@ Et sélectionner aléatoirement un prompt local actif (group_prompts.is_active=t
 Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répétition)
 Et programmer l'ouverture selon drop_time du groupe (heure française)
 Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
+Et si aucun prompt local actif n'est disponible, ignorer progressivement la fenêtre anti‑répétition (jusqu'à 0) pour garantir une sélection
+Et s'il n'existe toujours aucun prompt local actif, créer le round avec group_prompt_id=NULL et ne pas envoyer de notification tant qu'aucun prompt n'est activé
 ```
 
 #### Règles métier
@@ -713,6 +721,7 @@ Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_d
 - **Invariant simple** : Création d'un round pour le jour J à J-1, à l'heure drop_time
 - **Une seule manche par jour local** par groupe : UNIQUE(group_id, scheduled_for_local_date)
 - **Sélection intelligente** des prompts avec rotation (N=7 derniers exclus, paramétrable)
+- **Fallback défini** : si aucun prompt local actif, la fenêtre anti‑répétition est réduite; si 0 prompt actif, le round est créé sans prompt (group_prompt_id=NULL) et l'ouverture est différée jusqu'à activation d'un prompt
 
 ---
 
@@ -852,6 +861,13 @@ Alors submission_media est créé {submission_id, storage_path, kind}
 #### Règles métier
 
 - `kind ∈ {image,video,audio,file}`
+- **Formats & tailles**
+  - image: `image/jpeg`, `image/png`, `image/webp` (max 5MB)
+  - video: `video/mp4` H.264/AAC (max 25MB)
+  - audio: `audio/mpeg` (mp3), `audio/mp4` (m4a/aac) (max 10MB)
+  - file: `application/pdf` (max 10MB) — optionnel v1
+- **Contrôles**: validation MIME côté serveur + redimensionnement/optimisation image
+- **Différence avatars**: les images d'avatar de groupe restent limitées à 2MB
 
 #### Cas limites
 
@@ -887,24 +903,24 @@ Alors les médias s'affichent avec lecteurs/miniatures adaptés
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné un round ouvert et que j'ai soumis ma réponse
+Étant donné un round ouvert et que j'ai participé (soumission OU vote)
 Quand je publie un commentaire sur la question du jour
 Alors comments {round_id, author_id, body} est créé
 Et le commentaire apparaît dans la discussion globale sous la question
-Et tous les membres ayant soumis leur réponse peuvent le voir
+Et tous les membres ayant participé (soumission OU vote) peuvent le voir
 ```
 
 #### Règles métier
 
 - **Visibilité conditionnelle individuelle** : Chaque utilisateur voit la discussion uniquement après avoir participé (soumission OU vote)
 - Discussion globale commune à tous les membres ayant participé
-- Commentaires visibles immédiatement après publication (pour ceux qui ont soumis)
+- Commentaires visibles immédiatement après publication (pour ceux qui ont participé)
 - Ordre chronologique d'affichage
 
 #### Cas limites
 
 - Non-membre du groupe ⇒ refus
-- Pas encore soumis de réponse ⇒ discussion globale masquée
+- Pas encore participé (soumission OU vote) ⇒ discussion globale masquée
 
 ---
 
@@ -1354,9 +1370,10 @@ Alors un round n'est ouvert/fermé qu'une fois (contrôles de status + clé uniq
 
 ```gherkin
 Quand j'ouvre l'app
-Alors je vois le round du jour en tête avec son état (open/closed) et les précédents en dessous
+Alors je vois un feed qui agrège les rounds des groupes dont je suis membre, triés par date (open_at) et regroupés par jour
 Et chaque round affiche l'image du groupe (ou une image par défaut si aucune)
 Et l'image du groupe est cliquable pour accéder aux détails du groupe
+Et je peux filtrer le feed par groupe pour ne voir que ses rounds
 ```
 
 #### Règles métier
@@ -1364,6 +1381,7 @@ Et l'image du groupe est cliquable pour accéder aux détails du groupe
 - Image redimensionnée automatiquement pour l'affichage (thumbnail)
 - Image par défaut si image_path est NULL (groupes utilisent Storage paths)
 - Cache des images pour optimiser les performances
+- Agrégation multi‑groupes par défaut, avec filtre par groupe disponible
 
 ---
 
@@ -1423,7 +1441,7 @@ Et les médias liés sont marqués comme supprimés en cascade
 
 #### Cas limites
 
-- Suppression pendant open ⇒ recalcul local (ex. si votes dépendants)
+- Suppression pendant open ⇒ aucun recalcul de votes (les votes portent sur `target_user_id`, pas sur la soumission). L'affichage masque simplement la soumission et ses médias.
 
 ---
 

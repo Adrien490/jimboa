@@ -27,6 +27,11 @@ flowchart TD
     G --> H[user_devices: ciblage par appareil]
 ```
 
+Sémantique:
+
+- `mute=true` bloque toute notification (push et email) pour le couple (user, group)
+- `push=false` désactive uniquement le canal push; l'email reste envoyé
+
 ## 📱 Architecture des notifications
 
 ### Tables impliquées

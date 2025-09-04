@@ -38,7 +38,7 @@
 - Transition vers le statut `open`
 - Définition de `open_at` = ZonedDateTime(scheduled_for_local_date, drop_time, "Europe/Paris") → UTC
 - Calcul de `close_at` = ZonedDateTime(scheduled_for_local_date+1, drop_time, "Europe/Paris") → UTC
-- Déclenchement des notifications aux membres (si activées)
+- Déclenchement des notifications aux membres (si activées et non‑mute)
 
 ## 🔒 Fermeture (toutes les 5 min)
 

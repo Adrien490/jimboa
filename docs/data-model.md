@@ -63,7 +63,7 @@ erDiagram
 | **group_prompts**             | `group_id`, `type`, `title`, `body`, `is_active` (bool), `cloned_from_global` (nullable), `created_by`, `metadata` (jsonb), `created_at`, `updated_at`                                                        | Prompts locaux (créés par owner/admin). `cloned_from_global` = provenance _optionnelle_ (non clonable en UI v1)                                         |
 | **group_prompt_suggestions**  | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                     | Suggestions **membres → banque locale** (modération owner/admin)                                                                                        |
 | **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                                       | Suggestions **prompts locaux → banque globale** (modération app creator)                                                                                |
-| **daily_rounds**              | `group_id`, `group_prompt_id`, `scheduled_for_local_date` (DATE), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `created_at`, `updated_at`                     | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at` ; **pas de lien direct vers `global_prompts`** |
+| **daily_rounds**              | `group_id`, `group_prompt_id` (nullable), `scheduled_for_local_date` (DATE), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `created_at`, `updated_at`                     | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at` ; `group_prompt_id` peut rester `NULL` en fallback si aucun prompt actif n'est disponible à J-1 ; **pas de lien direct vers `global_prompts`** |
 | **submissions**               | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                         | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`                                     |
 | **submission_media**          | `submission_id`, `storage_path`, `kind` (`image`\|`video`\|`audio`\|`file`), `metadata` (jsonb), `created_at`                                                                                                 | 0..n médias par soumission ; validations de taille/format                                                                                               |
 
@@ -158,6 +158,7 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 - Paramétrable via constante applicative
 - Évite la monotonie tout en permettant la rotation
 - Si moins de N prompts actifs, sélection parmi tous les disponibles
+- Si aucun prompt local actif n'est disponible à J-1, créer le `daily_round` avec `group_prompt_id=NULL` et retenter la sélection à l'ouverture; aucune notification n'est envoyée tant qu'aucun prompt n'est activé
 
 ## 🔐 Règles de sécurité
 
@@ -192,16 +193,26 @@ Cette approche crée un **effet de mystère** qui encourage la participation :
 
 ```sql
 CREATE OR REPLACE FUNCTION user_has_participated(round_id UUID, user_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM submissions s WHERE s.round_id = $1 AND s.author_id = $2
+    SELECT 1 FROM submissions s WHERE s.round_id = user_has_participated.round_id AND s.author_id = user_has_participated.user_id
   ) OR EXISTS (
-    SELECT 1 FROM round_votes v WHERE v.round_id = $1 AND v.voter_id = $2
+    SELECT 1 FROM round_votes v WHERE v.round_id = user_has_participated.round_id AND v.voter_id = user_has_participated.user_id
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 ```
+
+Notes RLS/bootstrapping:
+
+- La fonction est créée/possédée par le owner des tables (ex: `postgres`) et exécute avec ses privilèges (SECURITY DEFINER), évitant une boucle RLS lors des sous‑requêtes.
+- `GRANT EXECUTE ON FUNCTION user_has_participated(UUID, UUID) TO authenticated;` (et `anon` si nécessaire).
+- La politique RLS continue d'utiliser `auth.uid()` comme `user_id` d'appel: `user_has_participated(round_id, auth.uid())`.
 
 **Politique RLS type** :
 
