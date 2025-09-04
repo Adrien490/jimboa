@@ -9,79 +9,66 @@
 
 ## 📅 Création planifiée (toutes les heures)
 
-**Objectif** : si la dernière manche est `closed` **depuis ≥ 24h**, créer `scheduled` pour `CURRENT_DATE` (fuseau du groupe), en choisissant un prompt **local actif** non utilisé récemment.
+**Objectif** : Créer automatiquement une nouvelle manche `scheduled` pour les groupes éligibles.
 
-Pseudo‑SQL :
+### Conditions de déclenchement
 
-```sql
-WITH last_closed AS (
-  SELECT g.id AS group_id,
-         MAX(dr.close_at) AS last_close_at
-  FROM groups g
-  LEFT JOIN daily_rounds dr ON dr.group_id = g.id
-  GROUP BY g.id
-), eligible_groups AS (
-  SELECT lg.group_id
-  FROM last_closed lg
-  JOIN groups g ON g.id = lg.group_id
-  WHERE g.is_active = TRUE
-    AND (lg.last_close_at IS NULL OR lg.last_close_at <= NOW() - INTERVAL '24 hours')
-)
-INSERT INTO daily_rounds (group_id, group_prompt_id, scheduled_for, status, created_at, updated_at)
-SELECT eg.group_id,
-       (
-         SELECT gp.id FROM group_prompts gp
-         WHERE gp.group_id = eg.group_id
-           AND gp.is_active = TRUE
-           AND gp.id NOT IN (
-             SELECT dr.group_prompt_id
-             FROM daily_rounds dr
-             WHERE dr.group_id = eg.group_id
-             ORDER BY dr.scheduled_for DESC
-             LIMIT 7 -- fenêtre glissante anti-répétition
-           )
-         ORDER BY random() LIMIT 1
-       ) AS group_prompt_id,
-       (NOW() AT TIME ZONE 'UTC')::date AS scheduled_for,
-       'scheduled', NOW(), NOW()
-FROM eligible_groups eg
-ON CONFLICT DO NOTHING;
-```
+- La dernière manche du groupe est `closed` depuis ≥ 24h
+- Le groupe est actif (`is_active = true`)
+
+### Logique de sélection des prompts
+
+- **Source** : Prompts locaux actifs uniquement (`group_prompts.is_active = true`)
+- **Anti-répétition** : Exclusion des 7 derniers prompts utilisés par le groupe
+- **Sélection** : Choix aléatoire parmi les prompts éligibles
+- **Planification** : Pour la date courante dans le fuseau du groupe
 
 ## 🔓 Ouverture (toutes les 5 min)
 
-**Objectif** : passer `scheduled` → `open` à l'heure locale `drop_time`.
+**Objectif** : Faire passer les manches de `scheduled` → `open` à l'heure locale configurée.
 
-```sql
-UPDATE daily_rounds dr
-SET status = 'open',
-    open_at = NOW(),
-    close_at = NOW() + INTERVAL '24 hours',
-    updated_at = NOW()
-FROM groups g
-JOIN group_settings gs ON gs.group_id = g.id
-    WHERE dr.group_id = g.id
-  AND dr.status = 'scheduled'
-  AND (
-    -- calcul "il est l'heure" dans le fuseau du groupe
-    (NOW() AT TIME ZONE g.timezone)::date >= dr.scheduled_for
-    AND to_char(NOW() AT TIME ZONE g.timezone, 'HH24:MI') >= to_char(gs.drop_time, 'HH24:MI')
-  );
-```
+### Conditions d'ouverture
+
+- Statut de la manche : `scheduled`
+- Date atteinte : Date courante ≥ `scheduled_for` dans le fuseau du groupe
+- Heure atteinte : Heure courante ≥ `drop_time` du groupe
+
+### Actions effectuées
+
+- Transition vers le statut `open`
+- Définition de `open_at` (timestamp d'ouverture)
+- Calcul de `close_at` (exactement 24h après `open_at`)
+- Déclenchement des notifications aux membres (si activées)
 
 ## 🔒 Fermeture (toutes les 5 min)
 
-```sql
-UPDATE daily_rounds
-SET status = 'closed', updated_at = NOW()
-WHERE status = 'open' AND close_at <= NOW();
-```
+**Objectif** : Fermer automatiquement les manches arrivées à échéance.
+
+### Conditions de fermeture
+
+- Statut de la manche : `open`
+- Échéance atteinte : Timestamp courant ≥ `close_at`
+
+### Actions effectuées
+
+- Transition vers le statut `closed`
+- Archivage automatique : la manche devient consultable en lecture seule
+- Fin des interactions : plus de soumissions, commentaires ou votes possibles
 
 ## 🔒 Garanties d'intégrité
 
-- **Transitions** : `scheduled → open → closed` uniquement
-- **Index** : `(group_id, scheduled_for)` unique ; index sur `status`, `open_at`, `close_at`
-- **Verrous** : advisory lock `pg_try_advisory_lock(group_id)` autour des jobs
+### Contrôles de cohérence
+
+- **Transitions** : Séquence stricte `scheduled → open → closed` uniquement
+- **Unicité** : Une seule manche par jour et par groupe (`group_id`, `scheduled_for`)
+- **Verrous** : Advisory locks pour éviter les doubles exécutions sur le même groupe
+- **Idempotence** : Les jobs peuvent être relancés sans effet de bord
+
+### Gestion des erreurs
+
+- **Retry automatique** : Nouvelle tentative en cas d'échec ponctuel
+- **Isolation** : L'échec sur un groupe n'impacte pas les autres
+- **Logs détaillés** : Traçabilité complète des opérations et erreurs
 
 ## 📊 Monitoring des jobs
 

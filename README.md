@@ -15,6 +15,7 @@
 - [👥 Proposition de valeur](docs/vision-concept.md#-proposition-de-valeur--personas)
 - [🎲 Règles du jeu](docs/game-rules.md)
 - [✨ Fonctionnalités clés](docs/game-rules.md#-fonctionnalités-clés-périmètre-v1)
+- [🛠️ Choix technologiques](docs/tech-stack.md)
 - [🗄️ Modèle de données](docs/data-model.md)
 - [🔔 Notifications](docs/notifications.md)
 - [📝 User Stories](docs/user-stories.md)
