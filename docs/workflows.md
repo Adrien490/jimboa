@@ -40,6 +40,34 @@
 - Calcul de `close_at` = ZonedDateTime(scheduled_for_local_date+1, drop_time, "Europe/Paris") → UTC
 - Déclenchement des notifications aux membres (si activées et non‑mute)
 
+### Séquence — Ouverture `round_open`
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Cron as Scheduler
+  participant DB as Postgres (daily_rounds)
+  participant NQ as Table notifications
+  participant Sel as Ciblage (SQL)
+  participant NW as Notifications Worker
+  participant Push as Push Provider
+
+  Cron->>DB: SELECT rounds à ouvrir (status='scheduled' & now>=open_at & group_prompt_id IS NOT NULL)
+  DB-->>Cron: liste des rounds
+  Cron->>DB: UPDATE status='open', set open_at/close_at
+  Note right of Cron: Heure française → UTC
+  Cron->>Sel: SELECT membres actifs non-mute avec push=true et group_settings.notifications_enabled=true
+  Sel-->>Cron: destinataires (user_id, group_id)
+  Cron->>NQ: INSERT notifications(type='round_open', status='pending')
+  NW->>NQ: fetch pending notifications (batch)
+  NW->>Push: send push to user_devices tokens
+  alt token invalide
+    NW->>DB: purge token (user_devices)
+  else succès
+    NW->>NQ: UPDATE status='sent'
+  end
+```
+
 ## 🔒 Fermeture (toutes les 5 min)
 
 **Objectif** : Fermer automatiquement les manches arrivées à échéance.
@@ -54,6 +82,28 @@
 - Transition vers le statut `closed`
 - Archivage automatique : la manche devient consultable en lecture seule
 - Fin des interactions : plus de soumissions, commentaires ou votes possibles
+
+## 🔁 Séquence — Cycle quotidien (J‑1 → open → close)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Cron as Scheduler
+  participant DB as Postgres
+  participant NQ as Table notifications
+  participant NW as Notifications Worker
+
+  Note over Cron,DB: J‑1 (création)
+  Cron->>DB: UPSERT daily_round (status='scheduled', scheduled_for_local_date=J)
+  Note over Cron,DB: J (ouverture)
+  Cron->>DB: SELECT rounds à ouvrir (scheduled & now>=open_at & group_prompt_id IS NOT NULL)
+  Cron->>DB: UPDATE round → status='open' (set open_at/close_at)
+  Cron->>DB: INSERT notifications(type='round_open', status='pending') pour les destinataires
+  NW->>NQ: Consomme et envoie push
+  Note over Cron,DB: J+1 (fermeture)
+  Cron->>DB: SELECT rounds à fermer (open & now>=close_at)
+  Cron->>DB: UPDATE round → status='closed'
+```
 
 ## 🔒 Garanties d'intégrité
 
