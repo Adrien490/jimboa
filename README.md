@@ -218,10 +218,10 @@ erDiagram
 
 #### 💬 Interactions
 
-| Table           | Champs principaux                        | Contraintes                                     |
-| --------------- | ---------------------------------------- | ----------------------------------------------- |
-| **comments**    | `round_id`, `author_id`, `body`          | Discussion globale sur la question du jour      |
-| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id) |
+| Table           | Champs principaux                        | Contraintes                                |
+| --------------- | ---------------------------------------- | ------------------------------------------ |
+| **comments**    | `round_id`, `author_id`, `body`          | Discussion globale sur la question du jour |
+| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id)                 |
 
 #### 🔔 Notifications
 
@@ -534,9 +534,9 @@ flowchart LR
 
 ### 📱 Interactions
 
-| Type             | Description                   | Symboles                      |
-| ---------------- | ----------------------------- | ----------------------------- |
-| **Commentaires** | Discussion libre              | Texte libre                   |
+| Type             | Description                   | Symboles                         |
+| ---------------- | ----------------------------- | -------------------------------- |
+| **Commentaires** | Discussion libre              | Texte libre                      |
 | **Votes**        | Choix dans les prompts "vote" | 1 vote/round, auto-vote autorisé |
 
 ## 🗓️ Roadmap Approche Hybride
