@@ -452,7 +452,7 @@ Et les fichiers Storage sont supprimés en arrière-plan (images, médias)
 ```gherkin
 Quand je définis drop_time (ou NULL pour héritage app)
 Alors les prochaines manches s'ouvrent automatiquement à cette heure (heure française)
-Et chaque manche dure obligatoirement 1 jour local avant création automatique de la suivante
+Et chaque manche dure obligatoirement 1 jour local (de drop_time à drop_time+1 jour)
 Et le système gère la création/ouverture/fermeture sans intervention
 ```
 
@@ -461,12 +461,12 @@ Et le système gère la création/ouverture/fermeture sans intervention
 - **Automatisation complète** : Création, ouverture et fermeture automatiques
 - **Durée de manche fixe** : exactement 1 jour local entre ouverture et fermeture
 - **Pas de chevauchement** possible entre manches d'un même groupe
-- **Cycle perpétuel** : Une nouvelle manche se crée automatiquement le jour suivant
+- **Création indépendante** : Chaque manche J est créée à J-1, sans dépendance à la fermeture précédente
 
 #### Cas limites
 
 - Modifier drop_time n'affecte pas une manche déjà ouverte
-- Le système crée la manche suivante pour le jour local suivant
+- Le système crée systématiquement une manche pour chaque jour français (invariant J à J-1)
 
 ---
 
@@ -630,7 +630,7 @@ Et je peux voir le statut de ma suggestion dans mes propositions
 ```gherkin
 Étant donné un prompt local réussi dans mon groupe
 Quand je clique "Suggérer pour la banque globale"
-Alors une entrée est créée dans prompt_suggestions avec status='pending'
+Alors une entrée est créée dans global_prompt_suggestions avec status='pending'
 Et le créateur de l'app reçoit une notification
 Et je peux ajouter un commentaire expliquant pourquoi ce prompt est intéressant
 Et je peux voir le statut de ma suggestion
@@ -758,7 +758,7 @@ Et la prochaine manche peut être planifiée pour ce groupe
 
 ## EPIC G — Soumissions
 
-> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. **Soumissions définitives pour l'auteur** : pas d'édition ni suppression après création par l'auteur, mais modération admin possible (soft delete).
+> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir participé (soumission OU vote). **Soumissions définitives pour l'auteur** : pas d'édition ni suppression après création par l'auteur, mais modération admin possible (soft delete).
 
 ### G1 — Créer une soumission (1 par user)
 
@@ -779,7 +779,7 @@ Et je ne peux plus créer d'autre soumission pour ce round
 
 #### Règles métier
 
-- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse
+- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir participé (soumission OU vote)
 - **Soumission définitive pour l'auteur** : Pas d'édition ni suppression possible après création par l'auteur
 - **Modération admin possible** : Owner/admin peuvent effectuer un soft delete (`deleted_by_admin`, `deleted_at`)
 - **Une seule soumission** par utilisateur par round : `UNIQUE(round_id, author_id)`
@@ -876,7 +876,7 @@ Alors les médias s'affichent avec lecteurs/miniatures adaptés
 
 ## EPIC I — Commentaires
 
-> **Principe** : Tout le contenu du round (soumissions, discussion, votes) est visible uniquement après avoir soumis sa propre réponse. Les commentaires sont liés au round (question) et non aux soumissions individuelles. Chaque utilisateur accède au contenu complet individuellement après sa participation.
+> **Principe** : Tout le contenu du round (soumissions, discussion, votes) est visible uniquement après avoir participé (soumission OU vote). Les commentaires sont liés au round (question) et non aux soumissions individuelles. Chaque utilisateur accède au contenu complet individuellement après sa participation.
 
 ### I1 — Commenter sur la question du jour
 
@@ -896,7 +896,7 @@ Et tous les membres ayant soumis leur réponse peuvent le voir
 
 #### Règles métier
 
-- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit la discussion uniquement après avoir soumis sa propre réponse
+- **Visibilité conditionnelle individuelle** : Chaque utilisateur voit la discussion uniquement après avoir participé (soumission OU vote)
 - Discussion globale commune à tous les membres ayant participé
 - Commentaires visibles immédiatement après publication (pour ceux qui ont soumis)
 - Ordre chronologique d'affichage
@@ -1300,7 +1300,7 @@ Et je peux interagir (commenter, voter si applicable)
 
 #### Règles métier
 
-- Les interactions ne sont visibles qu'après avoir soumis sa propre réponse
+- Les interactions ne sont visibles qu'après avoir participé (soumission OU vote)
 - Une fois la réponse soumise, toutes les interactions deviennent visibles instantanément
 - Cette règle s'applique à tous les types de prompts (question, vote, challenge)
 
@@ -1409,16 +1409,17 @@ Et cette action est possible même après fermeture du round
 
 Étant donné un round ouvert
 Quand je supprime une soumission en tant qu'owner/admin
-Alors je peux choisir entre suppression physique ou soft delete
+Alors la soumission est marquée comme supprimée (soft delete uniquement)
+Et les médias liés sont marqués comme supprimés en cascade
 ```
 
 #### Règles métier
 
-- **Soft delete obligatoire** après fermeture du round
-- **Choix suppression** avant fermeture (physique ou soft delete)
+- **Soft delete uniquement** : En toute circonstance (cohérence et traçabilité)
+- **Jamais de suppression physique** : Évite les problèmes de FK et conserve l'historique
 - **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
 - **Permissions** : Seuls owner/admin du groupe peuvent modérer
-- **Médias liés** : Supprimés en cascade avec la soumission
+- **Médias liés** : Soft delete en cascade (conservés mais masqués)
 
 #### Cas limites
 
@@ -1444,13 +1445,13 @@ Et cette action est possible même après fermeture du round
 
 Étant donné un round ouvert
 Quand je supprime un commentaire en tant qu'owner/admin
-Alors je peux choisir entre suppression physique ou soft delete
+Alors le commentaire est marqué comme supprimé (soft delete uniquement)
 ```
 
 #### Règles métier
 
-- **Soft delete obligatoire** après fermeture du round
-- **Choix suppression** avant fermeture (physique ou soft delete)
+- **Soft delete uniquement** : En toute circonstance (cohérence avec les soumissions)
+- **Jamais de suppression physique** : Évite les problèmes de FK et conserve l'historique
 - **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
 - **Permissions** : Seuls owner/admin du groupe peuvent modérer
 
@@ -1509,7 +1510,7 @@ Alors reprise possible ou relance simple (upload idempotent)
 
 ### Principes généraux
 
-- **Visibilité conditionnelle** : Les soumissions et interactions ne sont visibles qu'après avoir soumis sa propre réponse
+- **Visibilité conditionnelle** : Les soumissions et interactions ne sont visibles qu'après avoir participé (soumission OU vote)
 - **Aucun leaderboard/stats cumulées** : Pas de système de scoring ou de classement
 - **Consultation en lecture seule** : Les manches fermées restent consultables sans possibilité d'interaction
 - **Pas de modération structurée** : Pas de tables de report/log, seulement suppression par owner/admin

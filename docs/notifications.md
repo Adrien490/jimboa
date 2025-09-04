@@ -2,9 +2,16 @@
 
 ## 📨 Types de notifications
 
-| Type           | Trigger             | Timing      |
-| -------------- | ------------------- | ----------- |
-| **round_open** | Ouverture de manche | À `open_at` |
+| Type                                  | Trigger                               | Timing                     |
+| ------------------------------------- | ------------------------------------- | -------------------------- |
+| **round_open**                        | Ouverture de manche                   | À `open_at`                |
+| **transfer_requested**                | Demande de transfert de propriété     | À la création du transfert |
+| **transfer_accepted**                 | Transfert accepté                     | À l'acceptation            |
+| **transfer_rejected**                 | Transfert rejeté                      | Au refus                   |
+| **group_prompt_suggestion_pending**   | Suggestion de prompt local en attente | À la soumission            |
+| **group_prompt_suggestion_resolved**  | Suggestion locale approuvée/rejetée   | À la modération            |
+| **global_prompt_suggestion_pending**  | Suggestion vers banque globale        | À la soumission            |
+| **global_prompt_suggestion_resolved** | Suggestion globale traitée            | À la modération app        |
 
 ## ⚙️ Système de préférences
 
