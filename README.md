@@ -1,11 +1,11 @@
-# 🎮 Jimboa
+# 🎮 Jimbao
 
 **Un jeu social quotidien pour groupes privés**
 
 [![Website](https://img.shields.io/badge/Website-jimbao.fr-blue)](https://jimbao.fr)
 [![Status](https://img.shields.io/badge/Status-En%20développement-yellow)]()
 
-> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier immédiatement texte/média, commenter, réagir et voter. À la fermeture, la manche est scorée et un récap clair est enregistré pour le groupe.
+> Jimboa propose un prompt quotidien (question, vote, challenge) à un groupe privé. Chaque membre peut publier immédiatement texte/média, commenter, réagir et voter. À la fermeture, la manche est archivée et reste consultable par le groupe.
 
 ---
 
@@ -15,15 +15,12 @@
 - [👥 Proposition de valeur](#-proposition-de-valeur--personas)
 - [🎲 Règles du jeu](#-règles-de-jeu--boucle-quotidienne)
 - [✨ Fonctionnalités clés](#-fonctionnalités-clés-périmètre-v1)
-- [🚫 Non-objectifs](#-non-objectifs--contraintes-actées)
 - [🗄️ Modèle de données](#️-modèle-de-données-erd)
-- [📊 Scoring & Schémas](#-scoring-par-manche--schémas-json)
 - [🔔 Notifications](#-notifications--préférences)
 - [📝 User Stories](#-user-stories-backlog)
 - [⚙️ Workflow d'orchestration](#️-workflow-dorchestration-jobs)
 - [🎨 Parcours UX](#-parcours-ux-prioritaires)
 - [🗓️ Roadmap](#️-roadmap--jalons)
-- [🧪 Qualité & Tests](#-qualité-dod--tests)
 - [⚠️ Risques & Garde-fous](#️-risques--garde-fous)
 - [📖 Glossaire](#-glossaire)
 
@@ -40,7 +37,7 @@
 
 ### 🎪 Concept central
 
-Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe. Les membres participent librement avec du texte/média, commentent et réagissent en temps réel. À la fermeture, un récap clair immortalise cette manche quotidienne.
+Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe. Les membres participent librement avec du texte/média, commentent et réagissent en temps réel. À la fermeture, la manche est archivée et reste consultable avec tout son contenu.
 
 ## 👥 Proposition de valeur & Personas
 
@@ -73,8 +70,8 @@ graph LR
     C --> D[💬 Interactions]
     D --> E[🗳️ Vote si applicable]
     E --> F[⏰ Rappel]
-    F --> G[🔒 Fermeture + Scoring]
-    G --> H[📊 Récap stocké]
+    F --> G[🔒 Fermeture]
+    G --> H[📚 Archive consultable]
 ```
 
 ### 📋 Règles fondamentales
@@ -82,18 +79,20 @@ graph LR
 1. **Planification** : Heure locale du groupe
 2. **Ouverture** : Notification automatique à tous les membres
 3. **Participation** : Soumissions visibles immédiatement (pas de mode "blind")
-4. **Interactions** : Commentaires et réactions en temps réel
+4. **Interactions** : Commentaires et votes visibles après avoir soumis sa réponse
 5. **Vote** : Si type="vote", 1 vote par personne maximum
 6. **Rappel** : Notification avant fermeture (opt-in)
-7. **Fermeture** : Scoring automatique → récap définitif
+7. **Fermeture** : Archivage automatique → consultation en lecture seule
 
 ## ✨ Fonctionnalités clés (Périmètre v1)
 
 ### 👥 Gestion des groupes
 
 - **Types** : `friends` ou `couple`
-- **Rôles** : `owner` / `admin` / `member`
-- **Invitations** : Code unique (activable/désactivable)
+- **Rôles** : `owner` unique / `admin` / `member`
+- **Invitations** : Code permanent modifiable, généré automatiquement
+- **Image de profil** : Avatar personnalisable pour chaque groupe
+- **Authentification** : Google OAuth uniquement
 
 ### 🎯 Système de prompts
 
@@ -105,8 +104,8 @@ graph LR
 
 - **Soumissions** : Texte + médias (images, vidéos)
 - **Commentaires** : Discussion libre
-- **Réactions** : 👍 like, ❤️ love, 😂 haha, 😮 wow, 🔥 fire
 - **Votes** : 1 vote par manche (type "vote" uniquement)
+- **Visibilité conditionnelle** : Interactions visibles uniquement après avoir soumis sa réponse
 
 ### 🔔 Notifications intelligentes
 
@@ -114,28 +113,11 @@ graph LR
 - **Rappel** : Avant fermeture (personnalisable)
 - **Préférences** : Par utilisateur et par groupe
 
-### 🏆 Scoring local
+### 📚 Consultation des manches
 
-- **Portée** : Par manche uniquement
-- **Pas de leaderboard global** : Focus sur l'expérience quotidienne
-
-## 🚫 Non-objectifs & Contraintes actées
-
-### ❌ Fonctionnalités exclues
-
-| Fonctionnalité                    | Raison                                                 |
-| --------------------------------- | ------------------------------------------------------ |
-| **Leaderboard global**            | Focus sur l'expérience quotidienne, pas la compétition |
-| **Stats cumulées multi-manches**  | Éviter la gamification excessive                       |
-| **Mode "blind"**                  | Interactions en temps réel privilégiées                |
-| **Rôle "moderator"**              | Gouvernance simple : owner/admin suffisent             |
-| **Système de signalement avancé** | Modération par owner/admin uniquement                  |
-
-### 🎯 Contraintes de design
-
-- **Transparence** : Soumissions visibles immédiatement
-- **Simplicité** : Pas de mécaniques complexes
-- **Intimité** : Groupes privés uniquement
+- **Archives** : Toutes les manches fermées restent consultables
+- **Pas de scoring** : Focus sur le partage et l'interaction
+- **Lecture seule** : Aucune interaction possible sur les manches fermées
 
 ## 🗄️ Modèle de données (ERD)
 
@@ -177,28 +159,27 @@ erDiagram
 
 #### 👤 Utilisateurs & Groupes
 
-| Table              | Champs principaux                                                     | Contraintes               |
-| ------------------ | --------------------------------------------------------------------- | ------------------------- |
-| **profiles**       | `id` (=auth), `display_name`, `avatar_path`                           | Lié à auth.users          |
-| **groups**         | `name`, `type` (friends\|couple), `owner_id`, `timezone`, `join_code` | `owner_id` → profiles     |
-| **group_members**  | `group_id`, `user_id`, `role` (owner\|admin\|member)                  | UNIQUE(group_id, user_id) |
-| **group_settings** | `group_id`, `drop_time`, `close_after_hours`, `notifications_enabled` | 1:1 avec groups           |
+| Table              | Champs principaux                                                                                   | Contraintes                         |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **profiles**       | `id` (=auth), `display_name`, `image_path`                                                          | Lié à auth.users (Google)           |
+| **groups**         | `name`, `type` (friends\|couple), `owner_id`, `timezone`, `join_enabled`, `join_code`, `image_path` | `owner_id` → profiles, owner unique |
+| **group_members**  | `group_id`, `user_id`, `role` (owner\|admin\|member)                                                | UNIQUE(group_id, user_id)           |
+| **group_settings** | `group_id`, `drop_time`, `close_after_hours`, `notifications_enabled`                               | 1:1 avec groups                     |
 
 #### 🎯 Prompts & Manches
 
-| Table            | Champs principaux                                                       | Contraintes                     |
-| ---------------- | ----------------------------------------------------------------------- | ------------------------------- |
-| **prompts**      | `type` (question\|vote\|challenge), `title`, `body`, `metadata` (jsonb) | Tags via prompt_tag_links       |
-| **daily_rounds** | `group_id`, `prompt_id`, `scheduled_for`, `status`, `results` (jsonb)   | UNIQUE(group_id, scheduled_for) |
-| **submissions**  | `round_id`, `author_id`, `content_text`, `score`                        | UNIQUE(round_id, author_id)     |
+| Table            | Champs principaux                                                            | Contraintes                     |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------- |
+| **prompts**      | `type` (question\|vote\|challenge), `title`, `body`, `metadata` (jsonb)      | Tags via prompt_tag_links       |
+| **daily_rounds** | `group_id`, `prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed) | UNIQUE(group_id, scheduled_for) |
+| **submissions**  | `round_id`, `author_id`, `content_text`                                      | UNIQUE(round_id, author_id)     |
 
 #### 💬 Interactions
 
-| Table           | Champs principaux                                 | Contraintes                                       |
-| --------------- | ------------------------------------------------- | ------------------------------------------------- |
-| **comments**    | `submission_id`, `author_id`, `body`              | -                                                 |
-| **reactions**   | `entity_type`, `entity_id`, `user_id`, `reaction` | UNIQUE(entity_type, entity_id, user_id, reaction) |
-| **round_votes** | `round_id`, `voter_id`, `target_user_id`          | UNIQUE(round_id, voter_id), CHECK(voter≠target)   |
+| Table           | Champs principaux                        | Contraintes                                     |
+| --------------- | ---------------------------------------- | ----------------------------------------------- |
+| **comments**    | `submission_id`, `author_id`, `body`     | -                                               |
+| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id), CHECK(voter≠target) |
 
 #### 🔔 Notifications
 
@@ -212,86 +193,28 @@ erDiagram
 
 #### 🎯 Règles de participation
 
-| Contrainte                  | Description                  | Implémentation                                                    |
-| --------------------------- | ---------------------------- | ----------------------------------------------------------------- |
-| **1 round/jour/groupe**     | Unicité quotidienne          | `UNIQUE(group_id, scheduled_for)`                                 |
-| **1 soumission/user/round** | Une participation par manche | `UNIQUE(round_id, author_id)`                                     |
-| **1 vote/user/round**       | Vote unique, pas d'auto-vote | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
-| **Visibilité immédiate**    | Pas de mode "blind"          | Soumissions visibles dès publication                              |
+| Contrainte                    | Description                   | Implémentation                                                    |
+| ----------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| **1 round/jour/groupe**       | Unicité quotidienne           | `UNIQUE(group_id, scheduled_for)`                                 |
+| **1 soumission/user/round**   | Une participation par manche  | `UNIQUE(round_id, author_id)`                                     |
+| **1 vote/user/round**         | Vote unique, pas d'auto-vote  | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
+| **Visibilité immédiate**      | Pas de mode "blind"           | Soumissions visibles dès publication                              |
+| **Visibilité conditionnelle** | Interactions après soumission | Commentaires/votes visibles après avoir soumis sa réponse         |
 
 #### 🔐 Règles de sécurité
 
 - **Appartenance stricte** : Toute action requiert membership du groupe
-- **Owner invariant** : L'owner reste membre et non révoquable (si unique)
+- **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Fuseau horaire** : Planification locale, stockage UTC
 
-## 📊 Scoring par manche & Schémas JSON
+#### 🔑 Sécurité des codes d'invitation
 
-### 🎯 Principes du scoring
-
-- **Par type de prompt** : Règles paramétrées dans `prompts.metadata`
-- **Calcul à la fermeture** : Résultat écrit dans `daily_rounds.results`
-- **Scope local** : Aucun cumul cross-manches
-
-### ⚙️ Configuration (prompts.metadata)
-
-```json
-{
-	"scoring": {
-		"type": "question",
-		"participation_points": 5,
-		"reactions_weights": {
-			"like": 1,
-			"love": 2,
-			"haha": 2,
-			"wow": 2,
-			"fire": 3
-		},
-		"reactions_caps": 10,
-		"streak_bonus": {
-			"enabled": false
-		}
-	}
-}
-```
-
-### 📈 Résultat (daily_rounds.results)
-
-```json
-{
-	"round_id": "uuid",
-	"type": "question",
-	"participants": ["u1", "u2", "u3"],
-	"submissions": [
-		{
-			"author_id": "u1",
-			"submission_id": "s1",
-			"reactions": {
-				"like": 3,
-				"love": 1,
-				"haha": 0,
-				"wow": 1,
-				"fire": 2
-			},
-			"score_breakdown": {
-				"participation": 5,
-				"reactions": 10
-			},
-			"total": 15
-		}
-	],
-	"ranking": [
-		{ "user_id": "u1", "total": 15 },
-		{ "user_id": "u3", "total": 12 }
-	],
-	"ties": [],
-	"computed_at": "2025-09-04T19:00:00Z",
-	"rules_ref": {
-		"prompt_id": "p123",
-		"weights_version": "v1"
-	}
-}
-```
+- **Génération automatique** : Code créé à la création du groupe (6 caractères alphanumériques)
+- **Permanence** : Code permanent, pas d'expiration ni de quota d'utilisation
+- **Modification** : Possibilité de régénérer un nouveau code (invalide l'ancien)
+- **Stockage sécurisé** : Hash du code stocké dans `groups.join_code` (SHA-256 + salt)
+- **Rate limiting** : Maximum 5 tentatives de join par IP/heure
+- **Activation** : Code utilisable uniquement si `join_enabled=true`
 
 ## 🔔 Notifications & Préférences
 
@@ -302,7 +225,6 @@ erDiagram
 | **round_open**       | Ouverture de manche        | À `open_at`               |
 | **round_close_soon** | Rappel avant fermeture     | À `close_at - Δ` (ex: 1h) |
 | **mention**          | Mention dans commentaire   | Temps réel                |
-| **reaction**         | Réaction sur soumission    | Temps réel                |
 | **comment**          | Commentaire sur soumission | Temps réel                |
 
 ### ⚙️ Système de préférences
@@ -320,51 +242,18 @@ flowchart TD
     H --> I[Localisation via locale]
 ```
 
-## 📋 User Stories (Backlog)
+## 📋 User Stories
 
-### 🔐 Auth & Profil
+Pour consulter toutes les user stories détaillées organisées par épiques, voir : **[user-stories.md](./user-stories.md)**
 
-- [ ] **Création profil** : Générer profil automatiquement à la première connexion
-- [ ] **Édition profil** : Modifier `display_name` et avatar
-- [ ] **Suppression compte** : Vérifier transfert ownership si owner unique
+Le document contient 19 épiques couvrant :
 
-### 👥 Groupes
-
-- [ ] **Création groupe** : Choisir type (friends|couple) et fuseau horaire
-- [ ] **Rejoindre groupe** : Via code d'invitation (si `join_enabled=true`)
-- [ ] **Gestion codes** : Régénérer/désactiver code d'invitation
-- [ ] **Gestion rôles** : Promouvoir/rétrograder admin
-- [ ] **Quitter groupe** : Bloqué si owner unique
-
-### ⚙️ Réglages
-
-- [ ] **Horaires groupe** : Définir `drop_time` & `close_after_hours`
-- [ ] **Notifications groupe** : Activer/désactiver `notifications_enabled`
-- [ ] **Préférences personnelles** : Mute/push par groupe
-
-### 🎯 Prompts
-
-- [ ] **CRUD prompts** : Créer/modifier (type, titre, corps, média, tags)
-- [ ] **Gestion statut** : Activer/désactiver prompts
-- [ ] **Sélection intelligente** : Auto (diversité, fraîcheur, tags) ou manuelle
-
-### 🎲 Manches quotidiennes
-
-- [ ] **Planification auto** : Créer manche J+1 si absente
-- [ ] **Ouverture auto** : Déclencher à `open_at`
-- [ ] **Rappels** : Notifier avant fermeture
-- [ ] **Fermeture & scoring** : Calculer et stocker résultats
-
-### 📝 Participation
-
-- [ ] **Soumissions** : 1 par user/round (texte + médias)
-- [ ] **Interactions** : Commenter et réagir (👍❤️😂😮🔥)
-- [ ] **Votes** : 1 vote par round (type "vote"), modifiable avant fermeture
-
-### 🔔 Notifications
-
-- [ ] **Système core** : `round_open` / `round_close_soon`
-- [ ] **Sociales** : Mentions, réactions, commentaires (optionnelles)
+- Authentification & Profil (Google OAuth)
+- Gestion des groupes et rôles
+- Système de prompts et manches quotidiennes
+- Interactions sociales (commentaires, votes)
+- Notifications et préférences
+- Sécurité et intégrité des données
 
 ### ✅ Critères d'acceptation (Gherkin)
 
@@ -411,7 +300,7 @@ gantt
     section Exécution
     Ouverture manches        :active, open, 06:00, 23:00
     Rappels                  :active, remind, 06:00, 23:00
-    Fermeture & scoring      :active, close, 06:00, 23:59
+    Fermeture & archivage    :active, close, 06:00, 23:59
 ```
 
 #### 📅 Planification (quotidien, 00:00)
@@ -452,16 +341,16 @@ WHERE dr.status = 'open'
   AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.round_id = dr.id AND s.author_id = gm.user_id)
 ```
 
-#### 🔒 Fermeture & Scoring (toutes les 5 min)
+#### 🔒 Fermeture & Archivage (toutes les 5 min)
 
 ```sql
--- Transition: open → closed → scored
+-- Transition: open → closed (état final)
 UPDATE daily_rounds
 SET status = 'closed', close_at = NOW()
 WHERE status = 'open' AND close_at <= NOW();
 
--- Calcul scoring + results JSONB
--- Puis: status = 'scored'
+-- Les soumissions, commentaires et votes sont figés
+-- La manche reste consultable indéfiniment
 ```
 
 ### 🔒 Garanties d'intégrité
@@ -496,29 +385,31 @@ flowchart LR
 │  📝 SOUMISSIONS (temps réel)           │
 │                                        │
 │  👤 Alice: "Lire dans les pensées!"    │
-│  👍 3  ❤️ 1  😂 2  🔥 1           │
 │  💬 2 commentaires                    │
 │                                        │
 │  👤 Bob: "Voler comme Superman"       │
-│  👍 5  ❤️ 2  😮 1              │
 │  💬 1 commentaire                     │
 └────────────────────────────────────────┘
 ```
 
-### 📈 Round terminé (Récap)
+### 📚 Round archivé (Consultation)
 
 ```
 ┌────────────────────────────────────────┐
-│  🏆 RÉSULTATS - HIER                   │
+│  📚 MANCHE D'HIER - Fermée             │
 │                                        │
-│  1️⃣ Bob      18 pts  (👍5 ❤️2 😮1)       │
-│  2️⃣ Alice    15 pts  (👍3 ❤️1 😂2 🔥1)  │
-│  3️⃣ Charlie 12 pts  (👍4 ❤️1)         │
+│  👤 Bob: "Voler comme Superman"       │
+│  💬 3 commentaires                    │
 │                                        │
-│  📊 3 participants, 8 réactions        │
+│  👤 Alice: "Lire dans les pensées!"    │
+│  💬 2 commentaires                    │
+│                                        │
+│  👤 Charlie: "Téléportation!"         │
+│  💬 1 commentaire                     │
+│                                        │
+│  📊 3 participants, 6 commentaires     │
 │  📸 2 médias partagés                 │
-│                                        │
-│  [ 🔗 Voir détails ]                   │
+│  🔒 Fermée - Lecture seule             │
 └────────────────────────────────────────┘
 ```
 
@@ -526,102 +417,7 @@ flowchart LR
 
 - **Réglages groupe** : Heure locale, durée, notifications, type
 - **Banque prompts** : Filtre par tags, "Choisir pour demain"
-- **Historique** : Manches passées avec récaps
-
-## 🗺️ Roadmap & Jalons
-
-```mermaid
-gantt
-    title Planning de développement Jimboa
-    dateFormat YYYY-MM-DD
-    section M1 - Fondations
-    Auth + Profils           :active, m1-auth, 2025-01-01, 1w
-    Groupes & Membres        :active, m1-groups, after m1-auth, 1w
-    Prompts CRUD + Tags      :m1-prompts, after m1-groups, 1w
-    API & UI Skeleton        :m1-ui, after m1-prompts, 3d
-
-    section M2 - Jeu quotidien
-    Planification & Jobs     :m2-jobs, after m1-ui, 1w
-    Soumissions & Médias     :m2-submit, after m2-jobs, 1w
-    Interactions sociales    :m2-social, after m2-submit, 5d
-    Notifications            :m2-notif, after m2-social, 3d
-
-    section M3 - Scoring
-    Système de scoring       :m3-score, after m2-notif, 1w
-    Écrans récap            :m3-recap, after m3-score, 3d
-    Sélection auto prompts   :m3-auto, after m3-recap, 4d
-
-    section M4 - Finition
-    Préférences avancées    :m4-prefs, after m3-auto, 3d
-    Optimisations médias    :m4-media, after m4-prefs, 4d
-    Tests E2E & QA          :m4-qa, after m4-media, 1w
-```
-
-### 🏁 Milestone M1 — Fondations (3 semaines)
-
-- ✅ **Auth + Profils** : Supabase Auth, création profils automatique
-- ✅ **Groupes & Membres** : CRUD groupes, rôles, codes d'invitation
-- 🔄 **Prompts CRUD** : Interface admin, système de tags
-- 🔄 **Infrastructure** : ERD, API REST, écrans skeleton
-
-### 🎲 Milestone M2 — Jeu quotidien (3 semaines)
-
-- ⏳ **Jobs d'orchestration** : Planification, ouverture, fermeture
-- ⏳ **Participation** : Soumissions texte/média, upload sécurisé
-- ⏳ **Interactions** : Commentaires, réactions, votes uniques
-- ⏳ **Notifications** : Push ouverture + rappels
-
-### 📈 Milestone M3 — Scoring & Récap (2 semaines)
-
-- ⏳ **Engine scoring** : Métadata prompts, calcul dynamique
-- ⏳ **Interface récap** : Classements, stats visuelles
-- ⏳ **IA prompts** : Sélection diversifiée et intelligente
-
-### 🎨 Milestone M4 — Finition & QA (2 semaines)
-
-- ⏳ **UX avancée** : Préférences granulaires, mute/push
-- ⏳ **Médias** : Previews, compression, limites
-- ⏳ **Robustesse** : Hardening jobs, gestion concurrence
-- ⏳ **Qualité** : Tests E2E complets, monitoring
-
-## 🧪 Qualité, DoD & Tests
-
-### ✅ Definition of Done (DoD)
-
-| Critère           | Description                           | Vérification        |
-| ----------------- | ------------------------------------- | ------------------- |
-| **Règles métier** | Codées & testées (unit + integration) | ✅ Tests passent    |
-| **UX/UI**         | Erreurs explicites & localisées (FR)  | ✅ Messages clairs  |
-| **Observabilité** | Logs des transitions de round         | ✅ Traces complètes |
-| **E2E**           | Parcours critiques testés             | ✅ Scénarios OK     |
-
-### 🧪 Plan de tests
-
-#### 🔬 Tests unitaires
-
-- **Contraintes unicité** : Soumission/vote/round par jour
-- **Logique métier** : Scoring, transitions statuts
-- **Validations** : Schémas, formats, limites
-
-#### 🌐 Tests d'intégration
-
-- **Fuseaux horaires** : Groupes dans plusieurs TZ
-- **Notifications** : Respect préférences & mute
-- **Uploads** : Formats/tailles, sécurité
-- **Concurrence** : Double ouverture/fermeture
-
-#### 🎨 Tests E2E (Playwright)
-
-```gherkin
-Scénario: Cycle complet de participation
-  Étant donné un groupe actif avec 3 membres
-  Quand une manche s'ouvre automatiquement
-  Et que chaque membre soumet une réponse
-  Et que des interactions ont lieu (commentaires, réactions)
-  Et que la manche se ferme automatiquement
-  Alors le scoring est calculé et stocké
-  Et un récap est disponible pour tous
-```
+- **Historique** : Manches passées consultables avec tout leur contenu
 
 ## ⚠️ Risques & Garde-fous
 
@@ -653,25 +449,24 @@ Scénario: Cycle complet de participation
 
 ### 🎯 Termes métier
 
-| Terme          | Définition                                       | Exemple                                         |
-| -------------- | ------------------------------------------------ | ----------------------------------------------- |
-| **Prompt**     | Consigne quotidienne (question, vote, challenge) | "Quel est votre plat préféré ?"                 |
-| **Round**      | Manche quotidienne d'un groupe                   | Round du 04/01/2025 pour "Les Copains"          |
-| **Soumission** | Réponse d'un membre au prompt                    | Texte + image en réponse                        |
-| **Scoring**    | Calcul des points de la manche uniquement        | Participation (5pts) + Réactions (8pts) = 13pts |
+| Terme          | Définition                                       | Exemple                                   |
+| -------------- | ------------------------------------------------ | ----------------------------------------- |
+| **Prompt**     | Consigne quotidienne (question, vote, challenge) | "Quel est votre plat préféré ?"           |
+| **Round**      | Manche quotidienne d'un groupe                   | Round du 04/01/2025 pour "Les Copains"    |
+| **Soumission** | Réponse d'un membre au prompt                    | Texte + image en réponse                  |
+| **Archivage**  | Consultation des manches fermées                 | Toutes les contributions restent visibles |
 
 ### 👥 Rôles & Permissions
 
-| Rôle       | Permissions                        | Contraintes                                 |
-| ---------- | ---------------------------------- | ------------------------------------------- |
-| **Owner**  | Tout + transfert ownership         | Toujours membre, non révoquable (si unique) |
-| **Admin**  | Gestion groupe + prompts + membres | Nommé par owner                             |
-| **Member** | Participation + interactions       | Rôle par défaut                             |
+| Rôle       | Permissions                        | Contraintes                                      |
+| ---------- | ---------------------------------- | ------------------------------------------------ |
+| **Owner**  | Tout + transfert ownership         | Unique par groupe, non révoquable sans transfert |
+| **Admin**  | Gestion groupe + prompts + membres | Nommé par owner                                  |
+| **Member** | Participation + interactions       | Rôle par défaut                                  |
 
 ### 📱 Interactions
 
-| Type             | Description                                  | Symboles                      |
-| ---------------- | -------------------------------------------- | ----------------------------- |
-| **Réactions**    | Feedback rapide sur soumissions/commentaires | 👍 ❤️ 😂 😮 🔥                |
-| **Commentaires** | Discussion libre                             | Texte libre                   |
-| **Votes**        | Choix dans les prompts "vote"                | 1 vote/round, pas d'auto-vote |
+| Type             | Description                   | Symboles                      |
+| ---------------- | ----------------------------- | ----------------------------- |
+| **Commentaires** | Discussion libre              | Texte libre                   |
+| **Votes**        | Choix dans les prompts "vote" | 1 vote/round, pas d'auto-vote |
