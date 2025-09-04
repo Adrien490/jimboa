@@ -3,8 +3,8 @@
 ## 🔄 Principes
 
 - **Idempotence stricte** : transitions contrôlées par `status` + clés uniques
-- **Horodatage** : `open_at` et `close_at` calculés en UTC selon le **fuseau du groupe** et `drop_time`
-- **Durée fixe** : `close_at = open_at + INTERVAL '24 hours'`
+- **Horodatage** : `open_at` et `close_at` calculés en UTC selon l'heure française et `drop_time`
+- **Durée fixe** : `close_at = ZonedDateTime(date_française+1, drop_time, "Europe/Paris")`
 - **Locks** : advisory lock par `group_id` pour éviter les doubles transitions
 
 ## 📅 Création planifiée (toutes les heures)
@@ -13,7 +13,7 @@
 
 ### Conditions de déclenchement
 
-- La dernière manche du groupe est `closed` depuis ≥ 24h
+- Il n'existe pas encore de `daily_round` pour `(group_id, scheduled_for_local_date=J)` où J est le jour français suivant
 - Le groupe est actif (`is_active = true`)
 
 ### Logique de sélection des prompts
@@ -21,23 +21,23 @@
 - **Source** : Prompts locaux actifs uniquement (`group_prompts.is_active = true`)
 - **Anti-répétition** : Exclusion des 7 derniers prompts utilisés par le groupe
 - **Sélection** : Choix aléatoire parmi les prompts éligibles
-- **Planification** : Pour la date courante dans le fuseau du groupe
+- **Planification** : Pour le jour J (français) avec `scheduled_for_local_date=J`
 
 ## 🔓 Ouverture (toutes les 5 min)
 
-**Objectif** : Faire passer les manches de `scheduled` → `open` à l'heure locale configurée.
+**Objectif** : Faire passer les manches de `scheduled` → `open` à l'heure française configurée.
 
 ### Conditions d'ouverture
 
 - Statut de la manche : `scheduled`
-- Date atteinte : Date courante ≥ `scheduled_for` dans le fuseau du groupe
-- Heure atteinte : Heure courante ≥ `drop_time` du groupe
+- Date atteinte : Date française courante ≥ `scheduled_for_local_date`
+- Heure atteinte : Heure française courante ≥ `drop_time` du groupe (Europe/Paris)
 
 ### Actions effectuées
 
 - Transition vers le statut `open`
-- Définition de `open_at` (timestamp d'ouverture)
-- Calcul de `close_at` (exactement 24h après `open_at`)
+- Définition de `open_at` = ZonedDateTime(scheduled_for_local_date, drop_time, "Europe/Paris") → UTC
+- Calcul de `close_at` = ZonedDateTime(scheduled_for_local_date+1, drop_time, "Europe/Paris") → UTC
 - Déclenchement des notifications aux membres (si activées)
 
 ## 🔒 Fermeture (toutes les 5 min)
@@ -60,7 +60,7 @@
 ### Contrôles de cohérence
 
 - **Transitions** : Séquence stricte `scheduled → open → closed` uniquement
-- **Unicité** : Une seule manche par jour et par groupe (`group_id`, `scheduled_for`)
+- **Unicité** : Une seule manche par jour et par groupe (`group_id`, `scheduled_for_local_date`)
 - **Verrous** : Advisory locks pour éviter les doubles exécutions sur le même groupe
 - **Idempotence** : Les jobs peuvent être relancés sans effet de bord
 

@@ -15,7 +15,7 @@ graph LR
 
 ## 📋 Règles fondamentales
 
-1. **Planification automatique** : Création automatique toutes les 24h à l'heure locale du groupe
+1. **Planification automatique** : Création automatique pour chaque jour français (invariant J à J-1)
 2. **Ouverture** : Notification automatique à tous les membres (si autorisée)
 3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
 4. **Interactions** : Commentaires, réactions et votes visibles après avoir soumis

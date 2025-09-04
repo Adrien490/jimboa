@@ -16,7 +16,7 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 - [EPIC K — Votes (prompts type "vote")](#epic-k--votes-prompts-type-vote)
 - [EPIC L — Consultation des résultats](#epic-l--consultation-des-résultats)
 - [EPIC M — Intégrité & Accès](#epic-m--intégrité--accès)
-- [EPIC N — Fuseaux horaires & Planificateur](#epic-n--fuseaux-horaires--planificateur)
+- [EPIC N — Planificateur (heure française)](#epic-n--planificateur-heure-française)
 - [EPIC O — Feed & Navigation](#epic-o--feed--navigation)
 - [EPIC P — Actions d'admin simples](#epic-p--actions-dadmin-simples-sans-système-de-modération-dédié)
 - [EPIC R — Confidentialité & Données](#epic-r--confidentialité--données)
@@ -39,19 +39,19 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 Étant donné un utilisateur qui se connecte pour la première fois via Google OAuth
 Quand la session est validée par Supabase Auth avec Google
 Alors une entrée profiles(id=auth.users.id) est créée avec created_at et updated_at et un display_name par défaut basé sur le nom Google (ex: prénom du compte Google ou nom complet)
-Et l'image_path est initialisé avec l'URL de la photo de profil Google si disponible
+Et l'image_url est initialisé avec l'URL de la photo de profil Google si disponible
 ```
 
 #### Règles métier
 
 - `profiles.id = auth.users.id`
 - Display_name par défaut = `given_name` ou `name` du profil Google
-- Avatar par défaut = `picture` du profil Google si disponible
+- Avatar par défaut = URL `picture` du profil Google si disponible
 
 #### Cas limites
 
 - Multi-login simultané ⇒ idempotence (conflit ignoré)
-- Photo Google indisponible ⇒ image_path reste NULL
+- Photo Google indisponible ⇒ image_url reste NULL
 
 ---
 
@@ -65,13 +65,16 @@ Et l'image_path est initialisé avec l'URL de la photo de profil Google si dispo
 
 ```gherkin
 Étant donné un profil existant avec des données Google par défaut
-Quand je change display_name ou image_path
+Quand je change display_name ou image_url
 Alors updated_at est rafraîchi et le feed affiche le nouveau nom/avatar
 ```
 
 #### Règles métier
 
-- Avatar = chemin Storage (URL signée côté app) ou URL Google
+- **Avatar URL absolue** : `image_url` contient toujours une URL complète
+- **Google** : URL directe du profil Google (ex: `https://lh3.googleusercontent.com/...`)
+- **Storage personnalisé** : URL signée Supabase Storage (ex: `https://[project].supabase.co/storage/v1/object/sign/...`)
+- **Gestion côté app** : Génération d'URL signées pour les avatars Storage
 - Possibilité de conserver l'avatar Google ou d'uploader un avatar personnalisé
 
 #### Cas limites
@@ -151,21 +154,20 @@ Alors une notif "round_open" est envoyée aux membres, sauf si group_settings.no
 
 ```gherkin
 Étant donné un utilisateur U
-Quand je crée le groupe {name, type, timezone, image_path?}
+Quand je crée le groupe {name, type, image_path?}
 Alors groups est créé avec owner_id=U, et U est inséré dans group_members avec role='owner'
 Et si une image est fournie, elle est stockée dans image_path
 ```
 
 #### Règles métier
 
-- **Timezone fixe** : Défini à la création, non modifiable par la suite
+- **Heure française fixe** : Toute l'application fonctionne en heure française (Europe/Paris)
 - **Image de profil** facultative lors de la création
 - **Formats supportés** : JPEG, PNG, WebP
 - **Taille maximale** : 2MB
 
 #### Cas limites
 
-- Timezone invalide ⇒ refuser
 - Format d'image invalide ⇒ refuser l'upload, groupe créé sans image
 - Image trop volumineuse ⇒ redimensionnement automatique ou refus
 
@@ -196,6 +198,8 @@ Même si le code correspond à groups.join_code
 #### Règles métier
 
 - Code permanent sans expiration ni quota d'utilisation
+- **Unicité globale** : `UNIQUE` sur `groups.join_code` (pas de collision entre groupes)
+- **Normalisation** : Stockage en `UPPER` automatique pour éviter confusion casse
 - Stockage direct en clair dans la base de données
 - Régénération invalide instantanément l'ancien code
 
@@ -228,7 +232,8 @@ Alors l'action échoue avec un message d'erreur générique
 
 #### Règles métier
 
-- Vérification par comparaison directe du code
+- **Vérification globale** : Recherche du code dans toute la table `groups.join_code` (unicité globale)
+- **Comparaison directe** : Match exact du code normalisé (UPPER)
 - `join_enabled` doit être true pour accepter les invitations
 - Messages d'erreur génériques pour éviter l'énumération
 
@@ -298,9 +303,11 @@ Alors une entrée group_ownership_transfers est créée avec status='pending'
 Et le destinataire reçoit une notification de demande de transfert
 
 Quand le destinataire accepte le transfert
-Alors son role devient 'owner' dans group_members
-Et mon role devient 'admin' (ou 'member' selon choix)
-Et group_ownership_transfers.status devient 'accepted'
+Alors dans une transaction atomique :
+  - Son role devient 'owner' dans group_members
+  - Mon role devient 'admin' (ou 'member' selon choix) dans la même transaction
+  - group_ownership_transfers.status devient 'accepted'
+Et il n'y a jamais d'état transitoire avec 2 owners (contrainte M2 respectée)
 
 Quand le destinataire refuse le transfert
 Alors group_ownership_transfers.status devient 'rejected'
@@ -310,9 +317,11 @@ Et aucun changement de propriété n'a lieu
 #### Règles métier
 
 - **Acceptation obligatoire** : Le nouveau owner doit accepter le transfert
-- **Un groupe doit avoir exactement 1 owner** à tout moment
+- **Transaction atomique** : Promotion nouveau + rétrogradation ancien en une seule opération
+- **Un groupe doit avoir exactement 1 owner** à tout moment (jamais d'état transitoire à 2)
 - **Le transfert est irréversible** une fois accepté
 - **Annulation possible** tant que status='pending'
+- **Rollback automatique** : Si la transaction échoue à mi-parcours, aucun changement appliqué
 
 #### Cas limites
 
@@ -432,32 +441,32 @@ Et les fichiers Storage sont supprimés en arrière-plan (images, médias)
 
 ## EPIC D — Réglages de groupe
 
-### D1 — Définir heure d'ouverture automatique (durée fixe 24h)
+### D1 — Définir heure d'ouverture automatique (durée fixe 1 jour local)
 
 **En tant qu'** owner/admin  
-**Je veux** régler drop_time pour l'ouverture automatique (durée fixe 24h)  
+**Je veux** régler drop_time pour l'ouverture automatique (durée fixe 1 jour local)  
 **Afin d'** adapter l'horaire du lancement automatique quotidien
 
 #### Critères d'acceptation
 
 ```gherkin
 Quand je définis drop_time (ou NULL pour héritage app)
-Alors les prochaines manches s'ouvrent automatiquement à cette heure (fuseau du groupe)
-Et chaque manche dure obligatoirement 24h avant création automatique de la suivante
+Alors les prochaines manches s'ouvrent automatiquement à cette heure (heure française)
+Et chaque manche dure obligatoirement 1 jour local avant création automatique de la suivante
 Et le système gère la création/ouverture/fermeture sans intervention
 ```
 
 #### Règles métier
 
 - **Automatisation complète** : Création, ouverture et fermeture automatiques
-- **Durée de manche fixe** : exactement 24h entre ouverture et fermeture
+- **Durée de manche fixe** : exactement 1 jour local entre ouverture et fermeture
 - **Pas de chevauchement** possible entre manches d'un même groupe
-- **Cycle perpétuel** : Une nouvelle manche se crée automatiquement 24h après fermeture
+- **Cycle perpétuel** : Une nouvelle manche se crée automatiquement le jour suivant
 
 #### Cas limites
 
 - Modifier drop_time n'affecte pas une manche déjà ouverte
-- Le système attend obligatoirement 24h après fermeture avant création suivante
+- Le système crée la manche suivante pour le jour local suivant
 
 ---
 
@@ -524,7 +533,6 @@ Et je peux prévisualiser chaque prompt avant publication
 
 - Vue complète de tous les prompts (pending, approved, rejected, archived)
 - Actions de modération : approve, reject, edit, archive
-- Historique des modifications
 
 #### Cas limites
 
@@ -682,28 +690,29 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 
 ## EPIC F — Cycle de vie d'une manche (round)
 
-### F1 — Créer automatiquement les manches toutes les 24h
+### F1 — Créer automatiquement les manches quotidiennes
 
 **En tant que** système  
-**Je veux** créer automatiquement une nouvelle manche toutes les 24h après fermeture  
+**Je veux** créer automatiquement une nouvelle manche pour chaque jour local  
 **Afin de** maintenir un rythme quotidien sans intervention humaine
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand une manche est fermée depuis exactement 24h
-Alors créer automatiquement daily_rounds avec status='scheduled'
+Quand il est temps de créer la manche pour le jour J (à J-1)
+Alors créer automatiquement daily_rounds avec status='scheduled' et scheduled_for_local_date=J
 Et sélectionner aléatoirement un prompt local actif (group_prompts.is_active=true)
-Et éviter les prompts utilisés récemment (fenêtre glissante)
-Et programmer l'ouverture selon drop_time du groupe
+Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répétition)
+Et programmer l'ouverture selon drop_time du groupe (heure française)
+Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
 ```
 
 #### Règles métier
 
 - **Création automatique** : Pas d'intervention humaine nécessaire
-- **Rythme fixe** : Exactement 24h entre fermeture et création suivante
-- **Une seule manche active** par groupe à la fois
-- **Sélection intelligente** des prompts avec rotation
+- **Invariant simple** : Création d'un round pour le jour J à J-1, à l'heure drop_time
+- **Une seule manche par jour local** par groupe : UNIQUE(group_id, scheduled_for_local_date)
+- **Sélection intelligente** des prompts avec rotation (N=7 derniers exclus, paramétrable)
 
 ---
 
@@ -722,16 +731,16 @@ Alors status='open' et notif "round_open" (si autorisée)
 
 ---
 
-### F3 — Fermer la manche (après 24h exactement)
+### F3 — Fermer la manche (après exactement 1 jour local)
 
 **En tant que** système  
-**Je veux** passer open → closed après exactement 24h  
+**Je veux** passer open → closed après exactement 1 jour local  
 **Afin de** figer la manche et permettre la suivante
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand now() >= open_at + 24h & status='open'
+Quand now() >= close_at & status='open'
 Alors status='closed'
 Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
 Et la prochaine manche peut être planifiée pour ce groupe
@@ -739,17 +748,17 @@ Et la prochaine manche peut être planifiée pour ce groupe
 
 #### Règles métier
 
-- **Fermeture automatique** après exactement 24h d'ouverture
+- **Fermeture automatique** après exactement 1 jour local d'ouverture
 - **Idempotent** (pas de double fermeture)
 - **Les soumissions, votes et commentaires sont figés**
 - **Pas de prolongation** même si peu de participation
-- **Durée fixe** : toujours 24h, pas de configuration variable
+- **Durée fixe** : toujours 1 jour local, gestion correcte du DST
 
 ---
 
 ## EPIC G — Soumissions
 
-> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. **Soumissions définitives** : pas d'édition ni suppression après création.
+> **Principe** : 1 soumission par user & par manche. **Visibilité conditionnelle individuelle** : chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse. **Soumissions définitives pour l'auteur** : pas d'édition ni suppression après création par l'auteur, mais modération admin possible (soft delete).
 
 ### G1 — Créer une soumission (1 par user)
 
@@ -771,7 +780,8 @@ Et je ne peux plus créer d'autre soumission pour ce round
 #### Règles métier
 
 - **Visibilité conditionnelle individuelle** : Chaque utilisateur voit toutes les soumissions uniquement après avoir soumis sa propre réponse
-- **Soumission définitive** : Pas d'édition ni suppression possible après création
+- **Soumission définitive pour l'auteur** : Pas d'édition ni suppression possible après création par l'auteur
+- **Modération admin possible** : Owner/admin peuvent effectuer un soft delete (`deleted_by_admin`, `deleted_at`)
 - **Une seule soumission** par utilisateur par round : `UNIQUE(round_id, author_id)`
 - **Implémentation RLS** : Row Level Security Supabase pour gating automatique
 
@@ -911,17 +921,22 @@ Alors le commentaire disparaît de la discussion globale
 Et les autres membres ne le voient plus
 
 Étant donné un commentaire sur un round fermé (status='closed')
-Quand je tente d'éditer ou supprimer le commentaire
+Quand je tente d'éditer le commentaire en tant qu'auteur
 Alors l'opération échoue avec "Cannot modify comments after round is closed"
-Et le trigger DB bloque la modification/suppression
+Et le trigger DB bloque la modification
+
+Quand je tente de supprimer le commentaire en tant qu'auteur
+Alors l'opération échoue avec "Cannot delete comments after round is closed"
+Et seuls les owner/admin peuvent effectuer un soft delete
 ```
 
 #### Règles métier
 
-- **Contrôle temporel DB** : Triggers `BEFORE UPDATE/DELETE` sur `comments` vérifient `daily_rounds.status != 'closed'`
-- **Seul l'auteur** peut éditer/supprimer son commentaire (contrôle applicatif + RLS)
+- **Contrôle temporel DB** : Triggers `BEFORE UPDATE/DELETE` sur `comments` avec exceptions pour modération admin
+- **Auteur** : peut éditer/supprimer avant fermeture uniquement (contrôle applicatif + RLS)
+- **Owner/Admin** : peut effectuer soft delete après fermeture (`deleted_by_admin`, `deleted_at`)
 - **Ordre chronologique** préservé après édition
-- **Intégrité garantie** : Impossible de contourner la restriction côté client
+- **Intégrité garantie** : Impossible de contourner les restrictions côté client
 
 ---
 
@@ -936,13 +951,18 @@ Et le trigger DB bloque la modification/suppression
 ```gherkin
 Étant donné un trigger BEFORE UPDATE sur comments
 Quand une tentative d'UPDATE est faite sur un commentaire d'un round fermé
+Et que ce n'est PAS un soft delete admin (deleted_by_admin: NULL → NOT NULL)
 Alors le trigger lève une exception "Cannot modify comments after round is closed"
 Et la transaction est annulée
 
+Étant donné un trigger BEFORE UPDATE sur comments pour soft delete admin
+Quand deleted_by_admin passe de NULL à NOT NULL et deleted_at est défini
+Alors le trigger autorise l'opération (modération admin)
+
 Étant donné un trigger BEFORE DELETE sur comments
-Quand une tentative de DELETE est faite sur un commentaire d'un round fermé
-Alors le trigger lève une exception "Cannot modify comments after round is closed"
-Et la suppression est bloquée
+Quand une tentative de DELETE physique est faite sur un commentaire d'un round fermé
+Alors le trigger lève une exception "Use soft delete for moderation after round closure"
+Et la suppression physique est bloquée
 
 Étant donné un round ouvert (status='open' ou 'scheduled')
 Quand je modifie ou supprime un commentaire
@@ -951,9 +971,10 @@ Alors l'opération réussit normalement (trigger OK)
 
 #### Règles métier
 
-- **Fonction trigger** : `check_round_not_closed()` réutilisable
-- **Vérification** : `daily_rounds.status = 'closed'` pour le round du commentaire
-- **Exception SQL** : Message d'erreur explicite pour l'application
+- **Fonction trigger** : `check_comment_modification_allowed()` avec logique soft delete
+- **Vérification** : `daily_rounds.status = 'closed'` + détection soft delete admin
+- **Exception admin** : `deleted_by_admin: NULL → NOT NULL` + `deleted_at` défini = autorisé
+- **Messages d'erreur** : Explicites pour l'application (modification vs soft delete)
 - **Performance** : Index sur `daily_rounds(id, status)` pour les triggers
 
 #### Cas limites
@@ -1163,9 +1184,9 @@ Quand je tente de le supprimer ou désactiver
 Alors l'opération échoue avec "Cannot remove the last active owner of the group"
 Et le trigger maintient l'owner en place
 
-Étant donné un groupe avec 2 owners (transfert en cours)
-Quand l'ancien owner est désactivé après activation du nouveau
-Alors l'opération réussit (il reste 1 owner actif)
+Étant donné un transfert de propriété en cours d'acceptation
+Quand la transaction atomique s'exécute (nouveau owner + ancien rétrogradé)
+Alors l'opération réussit en une seule fois (toujours exactement 1 owner actif)
 
 Étant donné un owner qui quitte le groupe (DELETE)
 Quand il y a d'autres owners actifs dans le groupe
@@ -1216,6 +1237,7 @@ Alors le trigger laisse passer (pas de blocage)
 
 - **Index partiel performant** : Seulement sur `(group_id)` pour `role='owner' AND status='active'`
 - **Fonction trigger** : `ensure_owner_presence()` vérifie les autres owners actifs
+- **Exception transfert** : Autorise temporairement 2 owners dans une transaction atomique
 - **Protection UPDATE** : Si `OLD.role='owner'` et `NEW.role!='owner'` ou `NEW.status!='active'`
 - **Protection DELETE** : Si `OLD.role='owner' AND OLD.status='active'`
 
@@ -1325,19 +1347,19 @@ Et il ne peut y avoir qu'un seul membre avec role='owner'
 
 ---
 
-## EPIC N — Fuseaux horaires & Planificateur
+## EPIC N — Planificateur (heure française)
 
-### N1 — Calcul d'open_at/close_at par fuseau du groupe
+### N1 — Calcul d'open_at/close_at en heure française
 
 **En tant que** système  
-**Je veux** planifier à l'heure locale  
-**Afin de** respecter le groupe
+**Je veux** planifier à l'heure française  
+**Afin de** maintenir la simplicité de l'application
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand drop_time et close_after_hours sont connus
-Alors open_at/close_at sont calculés en UTC pour le jour scheduled_for
+Quand drop_time est connu
+Alors open_at/close_at sont calculés en UTC pour le jour scheduled_for_local_date en utilisant le fuseau Europe/Paris
 ```
 
 ---
@@ -1377,7 +1399,7 @@ Et l'image du groupe est cliquable pour accéder aux détails du groupe
 #### Règles métier
 
 - Image redimensionnée automatiquement pour l'affichage (thumbnail)
-- Image par défaut si image_path est NULL
+- Image par défaut si image_path est NULL (groupes utilisent Storage paths)
 - Cache des images pour optimiser les performances
 
 ---
@@ -1409,20 +1431,31 @@ Et je peux filtrer par type d'activité ou par période
 ### P1 — Supprimer une soumission du groupe (owner/admin)
 
 **En tant qu'** owner/admin  
-**Je veux** retirer une soumission  
-**Afin de** maintenir un cadre sain
+**Je veux** retirer une soumission inappropriée  
+**Afin de** maintenir un cadre sain dans le groupe
 
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné une soumission S du groupe
-Quand je la supprime
-Alors S, ses médias et commentaires liés sont retirés
+Étant donné une soumission dans un round de mon groupe
+Quand je la supprime en tant qu'owner/admin
+Alors la soumission est marquée comme supprimée (soft delete)
+Et deleted_by_admin et deleted_at sont définis
+Et la soumission disparaît de l'affichage pour tous les membres
+Et cette action est possible même après fermeture du round
+
+Étant donné un round ouvert
+Quand je supprime une soumission en tant qu'owner/admin
+Alors je peux choisir entre suppression physique ou soft delete
 ```
 
 #### Règles métier
 
-- Pas de log structuré (conformément au périmètre)
+- **Soft delete obligatoire** après fermeture du round
+- **Choix suppression** avant fermeture (physique ou soft delete)
+- **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
+- **Permissions** : Seuls owner/admin du groupe peuvent modérer
+- **Médias liés** : Supprimés en cascade avec la soumission
 
 #### Cas limites
 
@@ -1433,15 +1466,30 @@ Alors S, ses médias et commentaires liés sont retirés
 ### P2 — Supprimer un commentaire du groupe (owner/admin)
 
 **En tant qu'** owner/admin  
-**Je veux** retirer un commentaire  
-**Afin de** supprimer un contenu inapproprié
+**Je veux** retirer un commentaire inapproprié  
+**Afin de** maintenir un cadre sain dans la discussion
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand je supprime
-Alors le commentaire disparaît
+Étant donné un commentaire dans un round de mon groupe
+Quand je le supprime en tant qu'owner/admin
+Alors le commentaire est marqué comme supprimé (soft delete)
+Et deleted_by_admin et deleted_at sont définis
+Et le commentaire disparaît de l'affichage pour tous les membres
+Et cette action est possible même après fermeture du round
+
+Étant donné un round ouvert
+Quand je supprime un commentaire en tant qu'owner/admin
+Alors je peux choisir entre suppression physique ou soft delete
 ```
+
+#### Règles métier
+
+- **Soft delete obligatoire** après fermeture du round
+- **Choix suppression** avant fermeture (physique ou soft delete)
+- **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
+- **Permissions** : Seuls owner/admin du groupe peuvent modérer
 
 ---
 
@@ -1505,7 +1553,7 @@ Alors reprise possible ou relance simple (upload idempotent)
 
 ### Contraintes d'unicité
 
-- **1 round/jour/groupe** : Clé unique `(group_id, scheduled_for)`
+- **1 round/jour/groupe** : Clé unique `(group_id, scheduled_for_local_date)`
 - **1 soumission/user/round** : Clé unique `(round_id, author_id)`
 - **1 vote/user/round** : Clé unique `(round_id, voter_id)`
 - **Réactions typées uniques** : Par type/user/entité
@@ -1517,7 +1565,7 @@ Alors reprise possible ou relance simple (upload idempotent)
 - **Stockage** : Supabase Storage pour les médias
 - **Notifications push** : Système de tokens par appareil
 - **Planificateur** : Jobs cron pour l'ouverture/fermeture des manches (pas de scoring)
-- **Fuseaux horaires** : Calculs en UTC, affichage en heure locale du groupe
+- **Fuseau horaire** : Calculs en UTC, affichage en heure française (Europe/Paris)
 
 ---
 
