@@ -127,6 +127,7 @@ Alors je reçois les notifications de G par email uniquement (pas de push)
 #### Règles métier
 
 - `user_group_prefs` unique `(user_id, group_id)`
+- Exception par type: pour `round_open`, l'email n'est jamais utilisé; si `push=false`, aucune notification d'ouverture n'est envoyée (seul le push est supporté pour ce type)
 
 ---
 
@@ -142,8 +143,8 @@ Alors je reçois les notifications de G par email uniquement (pas de push)
 Étant donné un daily_round qui passe open
 Quand le scheduler l'ouvre
 Alors une notification "round_open" est émise pour chaque membre non-mute du groupe si group_settings.notifications_enabled=true
-Et si user_group_prefs.push=true alors une push est envoyée (et un email)
-Et si user_group_prefs.push=false alors seul un email est envoyé (pas de push)
+Et si user_group_prefs.push=true alors une notification push est envoyée
+Et si user_group_prefs.push=false alors aucune notification n'est envoyée (pas d'email pour round_open)
 ```
 
 ---

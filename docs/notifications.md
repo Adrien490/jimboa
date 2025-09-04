@@ -31,6 +31,7 @@ Sémantique:
 
 - `mute=true` bloque toute notification (push et email) pour le couple (user, group)
 - `push=false` désactive uniquement le canal push; l'email reste envoyé
+- Exception par type: pour `round_open`, l'email n'est jamais utilisé; si `push=false`, aucune notification d'ouverture n'est envoyée
 
 ## 📱 Architecture des notifications
 
@@ -46,7 +47,7 @@ Sémantique:
 1. **Trigger** : Un événement déclenche une notification (ex: ouverture de manche)
 2. **Filtrage groupe** : Vérifier `group_settings.notifications_enabled`
 3. **Filtrage utilisateur** : Vérifier `user_group_prefs.mute` pour chaque membre
-4. **Sélection canal** : Push + Email ou Email seul selon `user_group_prefs.push`
+4. **Sélection canal** : dépend du type; pour `round_open` → Push uniquement; pour les autres types → Push + Email ou Email seul selon `user_group_prefs.push`
 5. **Envoi** : Traitement asynchrone via `notifications` table avec statut
 
 ### Gestion des appareils
