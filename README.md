@@ -81,8 +81,7 @@ graph LR
 3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
 4. **Interactions** : Commentaires et votes visibles après avoir soumis sa réponse
 5. **Vote** : Si type="vote", 1 vote par personne maximum
-6. **Rappel** : Notification avant fermeture (opt-in)
-7. **Fermeture** : Archivage automatique → consultation en lecture seule
+6. **Fermeture** : Archivage automatique → consultation en lecture seule
 
 ## ✨ Fonctionnalités clés (Périmètre v1)
 
@@ -123,7 +122,6 @@ graph LR
 ### 🔔 Notifications intelligentes
 
 - **Ouverture** : Nouveau prompt disponible
-- **Rappel** : Avant fermeture (personnalisable)
 - **Préférences** : Par utilisateur et par groupe
 
 ### 📚 Consultation des manches
@@ -140,7 +138,7 @@ graph LR
 - **Starter pack** : Collection initiale de prompts approuvés par le créateur
 - **Contributions** : Suggestions issues des meilleurs prompts locaux (via suggestions)
 - **Modération centralisée** : App creator valide les ajouts à la banque globale
-- **Interface d'admin** : Dashboard exclusif au créateur pour gérer la banque globale
+- **Interface d'admin** : Interface exclusive au créateur pour gérer la banque globale
 - **Qualité éditoriale** : Cohérence, universalité, respect des valeurs
 
 #### 🏠 Prompts locaux (liberté créative)
@@ -228,11 +226,11 @@ erDiagram
 
 #### 🔔 Notifications
 
-| Table                | Champs principaux                      | Contraintes                               |
-| -------------------- | -------------------------------------- | ----------------------------------------- |
-| **notifications**    | `user_id`, `type`, `payload`, `status` | Types: round_open, round_close_soon, etc. |
-| **user_devices**     | `user_id`, `platform`, `token`         | Pour push notifications                   |
-| **user_group_prefs** | `user_id`, `group_id`, `mute`, `push`  | UNIQUE(user_id, group_id)                 |
+| Table                | Champs principaux                      | Contraintes               |
+| -------------------- | -------------------------------------- | ------------------------- |
+| **notifications**    | `user_id`, `type`, `payload`, `status` | Types: round_open, etc.   |
+| **user_devices**     | `user_id`, `platform`, `token`         | Pour push notifications   |
+| **user_group_prefs** | `user_id`, `group_id`, `mute`, `push`  | UNIQUE(user_id, group_id) |
 
 ### ⚖️ Contraintes métier
 
@@ -268,10 +266,9 @@ erDiagram
 
 ### 📨 Types de notifications
 
-| Type                 | Trigger                | Timing                    |
-| -------------------- | ---------------------- | ------------------------- |
-| **round_open**       | Ouverture de manche    | À `open_at`               |
-| **round_close_soon** | Rappel avant fermeture | À `close_at - Δ` (ex: 1h) |
+| Type           | Trigger             | Timing      |
+| -------------- | ------------------- | ----------- |
+| **round_open** | Ouverture de manche | À `open_at` |
 
 ### ⚙️ Système de préférences
 
@@ -326,8 +323,6 @@ Alors l'action est rejetée (auto-vote interdit)
 Quand open_at est atteint
 Alors le statut passe à "open" ET une notification est émise
 
-Et quand close_at - 1h est atteint ET je n'ai pas participé
-Alors je reçois une notification "round_close_soon"
 ```
 
 ## ⚙️ Workflow d'orchestration (Jobs)
@@ -345,7 +340,6 @@ gantt
 
     section Exécution
     Ouverture manches        :active, open, 06:00, 23:00
-    Rappels                  :active, remind, 06:00, 23:00
     Fermeture & archivage    :active, close, 06:00, 23:59
 ```
 
@@ -372,19 +366,6 @@ SET status = 'open', open_at = NOW()
 WHERE status = 'scheduled'
   AND scheduled_for <= CURRENT_DATE
   AND EXTRACT(hour FROM NOW()) >= EXTRACT(hour FROM drop_time)
-```
-
-#### ⏰ Rappels (toutes les 10 min)
-
-```sql
--- Notifier les non-participants avant fermeture
-INSERT INTO notifications (user_id, group_id, type, payload)
-SELECT gm.user_id, dr.group_id, 'round_close_soon', '{}'
-FROM daily_rounds dr
-JOIN group_members gm ON dr.group_id = gm.group_id
-WHERE dr.status = 'open'
-  AND dr.close_at - NOW() <= INTERVAL '1 hour'
-  AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.round_id = dr.id AND s.author_id = gm.user_id)
 ```
 
 #### 🔒 Fermeture & Archivage (toutes les 5 min)
@@ -570,7 +551,6 @@ flowchart LR
 
 - [ ] Système de suggestions (prompt local → global)
 - [ ] Interface de modération pour l'app creator
-- [ ] Analytics sur les prompts populaires
 - [ ] Workflow d'approbation avec feedback
 - [ ] Historique des contributions
 
@@ -579,5 +559,4 @@ flowchart LR
 - [ ] Recommandations basées sur l'historique du groupe
 - [ ] Détection automatique des prompts locaux réussis
 - [ ] Suggestions proactives de conversion vers global
-- [ ] Analytics avancés pour l'app creator
 - [ ] API pour contributions externes

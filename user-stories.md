@@ -166,22 +166,6 @@ Alors une notif "round_open" est envoyée aux membres, sauf si group_settings.no
 
 ---
 
-### B4 — Rappel avant fermeture (opt-in)
-
-**En tant que** membre non-participant  
-**Je veux** un rappel "bientôt fermé"  
-**Afin de** poster/voter à temps
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un round open et close_at dans X min
-Quand je n'ai pas encore soumis/voté selon le type
-Alors je reçois "round_close_soon" (si autorisé par prefs)
-```
-
----
-
 ## EPIC C — Groupes (création, rôles, invitations)
 
 ### C1 — Créer un groupe (friends/couple)
@@ -473,8 +457,7 @@ Alors aucune notif "open/close_soon" n'est émise à l'échelle du groupe (les n
 Étant donné que je suis le créateur de l'app (identifié par APP_CREATOR_EMAIL dans .env)
 Quand je me connecte avec mon compte Google autorisé
 Alors j'accède à l'interface d'administration
-Et je vois un dashboard avec les métriques système
-Et j'ai accès aux sections : banque globale, suggestions, analytics, modération
+Et j'ai accès aux sections : banque globale, suggestions, modération
 Et aucun autre utilisateur ne peut accéder à cette interface
 ```
 
@@ -501,7 +484,6 @@ Quand j'accède à la section "Banque globale"
 Alors je vois tous les prompts globaux (tous statuts confondus)
 Et je peux filtrer par statut, type, tags, date de création
 Et je peux créer, éditer, approuver, rejeter, archiver chaque prompt
-Et je peux voir les statistiques d'usage dans les groupes
 Et je peux prévisualiser chaque prompt avant publication
 ```
 
@@ -509,7 +491,6 @@ Et je peux prévisualiser chaque prompt avant publication
 
 - Vue complète de tous les prompts (pending, approved, rejected, archived)
 - Actions de modération : approve, reject, edit, archive
-- Statistiques d'engagement par prompt
 - Historique des modifications
 
 #### Cas limites
@@ -534,7 +515,6 @@ Alors je vois tous les prompts locaux de mon groupe (actifs et inactifs)
 Et je peux filtrer par type, statut, date de création
 Et je peux activer/désactiver chaque prompt pour la sélection automatique
 Et je peux éditer, dupliquer ou supprimer les prompts locaux
-Et je vois les statistiques d'usage de chaque prompt dans mon groupe
 Et seuls les owners/admins du groupe ont accès à cette interface
 ```
 
@@ -543,7 +523,6 @@ Et seuls les owners/admins du groupe ont accès à cette interface
 - Interface dédiée aux owners/admins du groupe uniquement
 - Vue complète des prompts locaux du groupe
 - Actions : créer, éditer, activer/désactiver, supprimer
-- Statistiques d'engagement locales au groupe
 - Aucun accès à la banque globale depuis cette interface
 
 ---
@@ -608,7 +587,7 @@ Et je peux voir le statut de ma suggestion dans mes propositions
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné un prompt local qui a généré beaucoup d'engagement dans mon groupe
+Étant donné un prompt local réussi dans mon groupe
 Quand je clique "Suggérer pour la banque globale"
 Alors une entrée est créée dans prompt_suggestions avec status='pending'
 Et le créateur de l'app reçoit une notification
@@ -619,7 +598,6 @@ Et je peux voir le statut de ma suggestion
 #### Règles métier
 
 - Tout membre peut suggérer (pas seulement owner/admin)
-- Statistiques d'engagement automatiquement incluses
 - Possibilité de retirer sa suggestion avant traitement
 - Historique des suggestions par utilisateur
 
@@ -661,7 +639,7 @@ Et si approuvé, le prompt devient disponible dans ma banque locale
 ```gherkin
 Étant donné une suggestion de prompt avec status='pending'
 Quand je l'examine dans l'interface d'admin
-Alors je vois le prompt original, les stats d'engagement, et le commentaire du suggéreur
+Alors je vois le prompt original et le commentaire du suggéreur
 Et je peux approuver (crée un global_prompt), rejeter avec feedback, ou demander modifications
 Et le suggéreur reçoit une notification du résultat
 Et si approuvé, le prompt devient disponible dans la banque globale
@@ -703,22 +681,7 @@ Alors status='open' et notif "round_open" (si autorisée)
 
 ---
 
-### F3 — Rappel "dernière ligne droite"
-
-**En tant que** système  
-**Je veux** prévenir avant close_at  
-**Afin de** maximiser la participation
-
-#### Critères d'acceptation
-
-```gherkin
-Quand now() = close_at - Δ
-Alors notif "round_close_soon" aux non-participants
-```
-
----
-
-### F4 — Fermer la manche
+### F3 — Fermer la manche
 
 **En tant que** système  
 **Je veux** passer open → closed  
