@@ -1057,6 +1057,176 @@ Alors l'opération réussit normalement (trigger d'intégrité OK)
 
 ---
 
+## EPIC M — Intégrité & Accès
+
+> **Principe** : Contrôles d'intégrité au niveau base de données pour empêcher les actions hors groupe et maintenir la cohérence des rôles.
+
+### M1 — Empêcher les actions hors groupe
+
+**En tant que** système  
+**Je veux** empêcher soumissions/commentaires/votes d'utilisateurs non-membres  
+**Afin de** garantir que seuls les membres actifs du groupe peuvent participer
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un utilisateur non-membre d'un groupe
+Quand il tente de soumettre une réponse à un round de ce groupe
+Alors l'opération échoue avec "User must be an active member of the round group"
+Et le trigger/RLS bloque l'insertion
+
+Étant donné un utilisateur non-membre d'un groupe
+Quand il tente de commenter sur un round de ce groupe
+Alors l'opération échoue avec "User must be an active member of the round group"
+Et le trigger/RLS bloque l'insertion
+
+Étant donné un membre actif du groupe
+Quand il soumet/commente sur un round de son groupe
+Alors l'opération réussit normalement (trigger/RLS OK)
+
+Étant donné un membre inactif (status!='active')
+Quand il tente une action sur un round du groupe
+Alors l'opération échoue (seuls les membres actifs autorisés)
+```
+
+#### Règles métier
+
+- **Contrainte croisée** : `daily_rounds.group_id ⋈ group_members.group_id` pour validation
+- **Statut actif requis** : Seuls les membres `status='active'` peuvent agir
+- **Double implémentation** : Triggers `BEFORE INSERT` + Politiques RLS `WITH CHECK`
+- **Performance** : Index sur `group_members(group_id, user_id, status)` pour jointures
+- **Cohérence** : `round_votes` utilise déjà `check_vote_integrity()` (pas de doublon)
+
+#### Cas limites
+
+- **Membre désactivé** : Perte d'accès immédiate aux nouvelles actions
+- **Round orphelin** : FK constraint échoue avant le trigger
+- **Transactions simultanées** : Triggers thread-safe avec isolation SQL
+
+---
+
+### M1.1 — Implémenter les contrôles d'appartenance au groupe
+
+**En tant que** système  
+**Je veux** utiliser triggers/RLS pour valider l'appartenance au groupe  
+**Afin d'** empêcher les actions cross-groupe au niveau base de données
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un trigger BEFORE INSERT sur submissions
+Quand une insertion est tentée par un non-membre du groupe
+Alors le trigger lève "User must be an active member of the round group"
+Et l'insertion est bloquée
+
+Étant donné une politique RLS sur comments
+Quand auth.uid() n'est pas membre actif du groupe du round
+Alors la politique WITH CHECK échoue
+Et l'insertion est refusée
+
+Étant donné un membre actif du groupe
+Quand il insère une soumission/commentaire valide
+Alors les contrôles passent (trigger + RLS OK)
+```
+
+#### Règles métier
+
+- **Fonction réutilisable** : `check_group_membership()` pour submissions + comments
+- **Jointure optimisée** : `daily_rounds ⋈ group_members` avec index
+- **Alternative RLS** : Politiques `FOR INSERT WITH CHECK` pour Supabase
+- **Cohérence auth** : `auth.uid()` dans RLS vs `NEW.author_id` dans triggers
+
+#### Cas limites
+
+- **Performance** : Index composite recommandé sur `(group_id, user_id, status)`
+- **Isolation** : Triggers compatibles avec transactions concurrentes
+- **Debugging** : Messages d'erreur explicites pour le frontend
+
+---
+
+### M2 — Owner unique et toujours membre
+
+**En tant que** système  
+**Je veux** garantir qu'il y a exactement 1 owner actif par groupe  
+**Afin de** maintenir la gouvernance et éviter les groupes sans propriétaire
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un groupe avec 1 owner actif
+Quand je tente d'ajouter un second owner actif
+Alors l'opération échoue avec violation d'index partiel unique
+Et il reste exactement 1 owner
+
+Étant donné le dernier owner actif d'un groupe
+Quand je tente de le supprimer ou désactiver
+Alors l'opération échoue avec "Cannot remove the last active owner of the group"
+Et le trigger maintient l'owner en place
+
+Étant donné un groupe avec 2 owners (transfert en cours)
+Quand l'ancien owner est désactivé après activation du nouveau
+Alors l'opération réussit (il reste 1 owner actif)
+
+Étant donné un owner qui quitte le groupe (DELETE)
+Quand il y a d'autres owners actifs dans le groupe
+Alors la suppression réussit (pas le dernier owner)
+```
+
+#### Règles métier
+
+- **Index partiel unique** : `group_members(group_id) WHERE role='owner' AND status='active'`
+- **Trigger de protection** : `BEFORE UPDATE/DELETE` vérifie la présence d'autres owners
+- **Transfert sécurisé** : Processus en 2 étapes (ajout nouveau → suppression ancien)
+- **Cohérence garantie** : Impossible d'avoir 0 owner actif par groupe
+
+#### Cas limites
+
+- **Transfert simultané** : Index unique empêche les doublons temporaires
+- **Suppression cascade** : Si le groupe est supprimé, pas de vérification owner
+- **Désactivation membre** : Trigger vérifie avant perte du rôle owner
+- **Performance** : Index partiel léger (seulement owners actifs)
+
+---
+
+### M2.1 — Implémenter l'index partiel et trigger owner
+
+**En tant que** système  
+**Je veux** utiliser un index partiel unique et un trigger de protection  
+**Afin de** garantir l'unicité et la permanence de l'owner au niveau DB
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un index partiel sur group_members(group_id) WHERE role='owner' AND status='active'
+Quand une insertion viole l'unicité de l'owner
+Alors PostgreSQL lève une erreur de contrainte unique
+Et l'insertion échoue
+
+Étant donné un trigger BEFORE UPDATE/DELETE sur group_members
+Quand une modification supprime le dernier owner actif
+Alors le trigger lève "Cannot remove the last active owner of the group"
+Et la modification est annulée
+
+Étant donné une modification qui ne touche pas le dernier owner
+Quand l'opération UPDATE/DELETE est effectuée
+Alors le trigger laisse passer (pas de blocage)
+```
+
+#### Règles métier
+
+- **Index partiel performant** : Seulement sur `(group_id)` pour `role='owner' AND status='active'`
+- **Fonction trigger** : `ensure_owner_presence()` vérifie les autres owners actifs
+- **Protection UPDATE** : Si `OLD.role='owner'` et `NEW.role!='owner'` ou `NEW.status!='active'`
+- **Protection DELETE** : Si `OLD.role='owner' AND OLD.status='active'`
+
+#### Cas limites
+
+- **Performance** : Index partiel très léger (peu d'owners par rapport aux membres)
+- **Concurrence** : Index unique thread-safe pour les transferts simultanés
+- **Maintenance** : Index se met à jour automatiquement avec les changements de statut
+
+---
+
 ## EPIC L — Consultation des résultats
 
 ### L1 — Consulter une manche fermée

@@ -383,7 +383,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Target user must be an active member of the round group';
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -427,6 +427,118 @@ CREATE TRIGGER reactions_delete_check
   BEFORE DELETE ON reactions
   FOR EACH ROW
   EXECUTE FUNCTION check_round_not_closed_for_reactions();
+```
+
+### 🔐 Intégrité et contrôle d'accès
+
+#### M1 - Contraintes croisées (actions ⇒ membre du groupe)
+
+**Objectif** : Empêcher soumissions/commentaires/votes d'utilisateurs non-membres du groupe.
+
+```sql
+-- Fonction de validation d'appartenance au groupe
+CREATE OR REPLACE FUNCTION check_group_membership()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Vérifier que l'utilisateur est membre actif du groupe du round
+  IF NOT EXISTS (
+    SELECT 1 FROM daily_rounds dr
+    JOIN group_members gm ON gm.group_id = dr.group_id
+    WHERE dr.id = NEW.round_id
+    AND gm.user_id = NEW.author_id  -- ou voter_id selon la table
+    AND gm.status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'User must be an active member of the round group';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers pour submissions
+CREATE TRIGGER submissions_group_check
+  BEFORE INSERT ON submissions
+  FOR EACH ROW
+  EXECUTE FUNCTION check_group_membership();
+
+-- Triggers pour comments
+CREATE TRIGGER comments_group_check
+  BEFORE INSERT ON comments
+  FOR EACH ROW
+  EXECUTE FUNCTION check_group_membership();
+
+-- Note: round_votes utilise déjà check_vote_integrity() qui inclut cette vérification
+```
+
+**Alternative RLS** (Row Level Security) :
+
+```sql
+-- Politique RLS pour submissions
+CREATE POLICY submissions_group_member_only ON submissions
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM daily_rounds dr
+      JOIN group_members gm ON gm.group_id = dr.group_id
+      WHERE dr.id = round_id
+      AND gm.user_id = auth.uid()
+      AND gm.status = 'active'
+    )
+  );
+
+-- Politique similaire pour comments
+CREATE POLICY comments_group_member_only ON comments
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM daily_rounds dr
+      JOIN group_members gm ON gm.group_id = dr.group_id
+      WHERE dr.id = round_id
+      AND gm.user_id = auth.uid()
+      AND gm.status = 'active'
+    )
+  );
+```
+
+#### M2 - Owner unique et toujours membre
+
+**Objectif** : Garantir qu'il y a toujours exactement 1 owner par groupe.
+
+```sql
+-- Index partiel d'unicité pour owner
+CREATE UNIQUE INDEX group_members_unique_owner
+ON group_members (group_id)
+WHERE role = 'owner' AND status = 'active';
+
+-- Fonction pour maintenir l'owner lors des transferts
+CREATE OR REPLACE FUNCTION ensure_owner_presence()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Si on supprime/désactive le dernier owner
+  IF (OLD.role = 'owner' AND OLD.status = 'active')
+     AND (NEW IS NULL OR NEW.role != 'owner' OR NEW.status != 'active') THEN
+
+    -- Vérifier qu'il reste au moins un owner actif
+    IF NOT EXISTS (
+      SELECT 1 FROM group_members
+      WHERE group_id = OLD.group_id
+      AND role = 'owner'
+      AND status = 'active'
+      AND id != OLD.id
+    ) THEN
+      RAISE EXCEPTION 'Cannot remove the last active owner of the group';
+    END IF;
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers pour maintenir l'owner
+CREATE TRIGGER group_members_owner_check
+  BEFORE UPDATE OR DELETE ON group_members
+  FOR EACH ROW
+  EXECUTE FUNCTION ensure_owner_presence();
 ```
 
 ### 🗑️ Suppression en cascade
