@@ -8,7 +8,7 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 - [EPIC B — Appareils & Notifications](#epic-b--appareils--notifications)
 - [EPIC C — Groupes (création, rôles, invitations)](#epic-c--groupes-création-rôles-invitations)
 - [EPIC D — Réglages de groupe](#epic-d--réglages-de-groupe)
-- [EPIC E — Prompts (banque, tags, sélection)](#epic-e--prompts-banque-tags-sélection)
+- [EPIC E — Prompts Hybrides (Global + Local)](#epic-e--prompts-hybrides-global--local)
 - [EPIC F — Cycle de vie d'une manche (round)](#epic-f--cycle-de-vie-dune-manche-round)
 - [EPIC G — Soumissions](#epic-g--soumissions)
 - [EPIC H — Médias (images/vidéos/audio/fichiers)](#epic-h--médias-imagesvidéosaudiofichiers)
@@ -513,7 +513,31 @@ Et seuls les owners/admins peuvent le voir dans l'interface de gestion
 
 ---
 
-### E3 — Suggérer un prompt local vers la banque globale
+### E3 — Suggérer un prompt vers la banque locale du groupe
+
+**En tant que** membre de groupe  
+**Je veux** proposer un nouveau prompt pour la banque locale de mon groupe  
+**Afin d'** enrichir la collection de prompts du groupe
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné que je suis membre d'un groupe
+Quand je soumets une suggestion de prompt local
+Alors elle est créée avec status='pending' dans group_prompt_suggestions
+Et les owners/admins du groupe reçoivent une notification
+Et je peux voir le statut de ma suggestion dans mes propositions
+```
+
+#### Règles métier
+
+- Tout membre peut suggérer des prompts locaux
+- Modération par les owners/admins du groupe uniquement
+- Statuts possibles : pending/approved/rejected
+
+---
+
+### E4 — Suggérer un prompt local vers la banque globale
 
 **En tant que** membre de groupe  
 **Je veux** proposer qu'un prompt local réussi soit ajouté à la banque globale  
@@ -539,7 +563,32 @@ Et je peux voir le statut de ma suggestion
 
 ---
 
-### E4 — Modérer les suggestions (app creator)
+### E5 — Modérer les suggestions locales (owner/admin)
+
+**En tant qu'** owner/admin de groupe  
+**Je veux** examiner et traiter les suggestions de prompts pour mon groupe  
+**Afin de** enrichir ma banque locale avec les meilleures propositions
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné des suggestions de prompts locaux avec status='pending'
+Quand j'accède à l'interface de modération du groupe
+Alors je vois toutes les suggestions en attente pour mon groupe
+Et je peux approuver (crée un group_prompt), rejeter avec feedback
+Et le suggéreur reçoit une notification du résultat
+Et si approuvé, le prompt devient disponible dans ma banque locale
+```
+
+#### Règles métier
+
+- Accès limité aux owners/admins du groupe
+- Modération décentralisée par groupe
+- Feedback optionnel mais recommandé
+
+---
+
+### E6 — Modérer les suggestions globales (app creator)
 
 **En tant que** créateur de l'app  
 **Je veux** examiner et traiter les suggestions de prompts locaux  
@@ -558,32 +607,6 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 
 ---
 
-### E5 — Sélectionner le prompt du jour (owner/admin)
-
-**En tant qu'** owner/admin de groupe  
-**Je veux** choisir le prompt de demain parmi mes prompts locaux  
-**Afin de** créer l'expérience parfaite pour mon groupe
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné que je planifie le prompt de demain
-Quand j'ouvre le sélecteur de prompts
-Alors je vois uniquement mes prompts locaux actifs (group_prompts)
-Et je peux filtrer par type, tags, ou récence d'utilisation
-Et je peux prévisualiser chaque prompt avant sélection
-Et je peux programmer à l'avance plusieurs jours
-Et je peux activer la sélection automatique parmi mes prompts locaux
-```
-
-#### Règles métier
-
-- Accès uniquement aux prompts locaux du groupe
-- Pas d'accès aux prompts globaux pour la sélection
-- Sélection manuelle ou automatique parmi les prompts locaux uniquement
-
----
-
 ## EPIC F — Cycle de vie d'une manche (round)
 
 ### F1 — Planifier la manche quotidienne
@@ -597,6 +620,8 @@ Et je peux activer la sélection automatique parmi mes prompts locaux
 ```gherkin
 Quand la veille à T (cron)
 Alors créer daily_rounds pour D+1 si absent (UNIQUE (group_id, scheduled_for))
+Et sélectionner aléatoirement un prompt local actif (group_prompts.is_active=true)
+Et éviter les prompts utilisés récemment (fenêtre glissante)
 ```
 
 ---
@@ -642,12 +667,15 @@ Alors notif "round_close_soon" aux non-participants
 ```gherkin
 Quand now() >= close_at & status='open'
 Alors status='closed'
+Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
 ```
 
 #### Règles métier
 
-- Idempotent (pas de double fermeture)
-- Les soumissions, votes et commentaires sont figés
+- **Fermeture automatique** à l'heure prévue, même si personne n'a participé
+- **Idempotent** (pas de double fermeture)
+- **Les soumissions, votes et commentaires sont figés**
+- **Pas de prolongation** même si peu de participation
 
 ---
 

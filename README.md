@@ -100,12 +100,13 @@ graph LR
 - **Banque globale curatée** : Starter pack de prompts approuvés pour tous les groupes
 - **Prompts locaux** : Owners/admins peuvent créer des prompts spécifiques à leur groupe
 - **Système de suggestions** : Proposer des prompts locaux réussis vers la banque globale
-- **Contributions communautaires** : Suggérer des prompts locaux réussis pour la banque globale
+- **Suggestions locales** : Membres proposent des prompts pour leur groupe (modération owner/admin)
+- **Suggestions globales** : Prompts locaux réussis proposés pour la banque globale (modération app creator)
 - **Types** : Question, Vote, Challenge (global et local)
 - **Workflow global** : Pending → Approved/Rejected → Archived
 - **Workflow local** : Création directe par owner/admin, édition libre
 - **Tagging & filtrage** : Classification par tags, langue, difficulté
-- **Sélection** : Automatique (globaux + locaux) ou manuelle par groupe
+- **Sélection** : Automatique aléatoire parmi les prompts locaux du groupe
 
 ### 💬 Interactions sociales
 
@@ -161,8 +162,9 @@ erDiagram
     global_prompts ||--o{ daily_rounds : "utilisé dans round"
     group_prompts ||--o{ daily_rounds : "utilisé dans round"
     global_prompts ||--o{ group_prompts : "cloné depuis"
-    group_prompts ||--o{ prompt_suggestions : "suggéré vers global"
-    profiles ||--o{ prompt_suggestions : "suggère"
+    profiles ||--o{ group_prompt_suggestions : "suggère vers groupe"
+    group_prompts ||--o{ global_prompt_suggestions : "suggéré vers global"
+    profiles ||--o{ global_prompt_suggestions : "suggère vers global"
     profiles ||--o{ global_prompts : "créateur/modérateur"
     profiles ||--o{ group_prompts : "créateur local"
     daily_rounds ||--o{ submissions : "soumissions"
@@ -208,7 +210,8 @@ erDiagram
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | **global_prompts**     | `type` (question\|vote\|challenge), `title`, `body`, `status` (pending\|approved\|rejected\|archived), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb) | Banque globale curatée, seuls les 'approved' sont visibles aux groupes |
 | **group_prompts**      | `group_id`, `type`, `title`, `body`, `is_active`, `cloned_from_global`, `created_by`, `metadata` (jsonb)                                                                          | Prompts locaux créés/clonés par owners/admins                          |
-| **prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions de prompts locaux → globaux                                |
+| **group_prompt_suggestions** | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (pending\|approved\|rejected), `feedback`                                                                      | Suggestions membres → banque locale (modération owner/admin)           |
+| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (pending\|approved\|rejected), `feedback`                                                                                             | Suggestions prompts locaux → banque globale (modération app creator)  |
 | **daily_rounds**       | `group_id`, `global_prompt_id`, `group_prompt_id`, `scheduled_for`, `status` (scheduled\|open\|closed)                                                                            | UNIQUE(group_id, scheduled_for), utilise soit global soit group prompt |
 | **submissions**        | `round_id`, `author_id`, `content_text`                                                                                                                                           | UNIQUE(round_id, author_id)                                            |
 
@@ -485,7 +488,7 @@ flowchart LR
 ### ⚙️ Écrans secondaires
 
 - **Réglages groupe** : Heure locale, durée, notifications, type
-- **Banque prompts** : Filtre par tags, "Choisir pour demain"
+- **Gestion prompts locaux** : Création/édition par owner/admin uniquement
 - **Historique** : Manches passées consultables avec tout leur contenu
 
 ## ⚠️ Risques & Garde-fous
@@ -530,9 +533,9 @@ flowchart LR
 | Rôle            | Permissions                                                                        | Contraintes                                         |
 | --------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
 | **App Creator** | Modération banque globale + administration système + accès exclusif banque globale | Email défini dans .env, seul accès interface admin  |
-| **Owner**       | Gestion groupe + gestion prompts locaux + suggestions (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert    |
-| **Admin**       | Gestion prompts locaux + sélection + membres (PAS d'accès banque globale)          | Nommé par owner                                     |
-| **Member**      | Participation + interactions + suggestion prompts locaux vers globaux              | Rôle par défaut, aucun accès aux banques de prompts |
+| **Owner**       | Gestion groupe + gestion prompts locaux + modération suggestions locales (PAS d'accès banque globale) | Unique par groupe, non révoquable sans transfert    |
+| **Admin**       | Gestion prompts locaux + modération suggestions locales + membres (PAS d'accès banque globale)          | Nommé par owner                                     |
+| **Member**      | Participation + interactions + suggestions (vers groupe ET vers global)              | Rôle par défaut, aucun accès direct aux banques de prompts |
 
 ### 📱 Interactions
 
