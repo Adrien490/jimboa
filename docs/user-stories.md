@@ -503,7 +503,7 @@ Alors aucune notif "round_open" n'est émise à l'échelle du groupe (les notifs
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné que je suis le créateur de l'app (claim JWT `app_admin=true` OU email = `APP_CREATOR_EMAIL`)
+Étant donné que je suis le créateur de l'app (email = `APP_CREATOR_EMAIL`)
 Quand je me connecte avec mon compte autorisé
 Alors j'accède à l'interface d'administration
 Et j'ai accès aux sections : banque globale, suggestions, modération
@@ -520,9 +520,9 @@ Et aucun autre utilisateur ne peut accéder à cette interface
 
 #### Notes d'implémentation (RLS)
 
-- Sans table dédiée: utiliser un claim JWT `app_admin=true` signé côté serveur
-- Exemple de politique RLS: `USING ((auth.jwt() ->> 'app_admin')::boolean = true)`
-- Si vous préférez baser l'accès sur `APP_CREATOR_EMAIL`, limitez‑vous à un gating UI (moins sûr) OU mettez en place une fonction Postgres qui lit le claim `email` et compare à une valeur de configuration (hors scope data‑model)
+- Recommandé: mettre `APP_CREATOR_EMAIL` dans une configuration côté DB (ex: GUC `app.app_creator_email`)
+- Exemple de politique RLS (comparaison email): `USING ((auth.jwt() ->> 'email') = current_setting('app.app_creator_email', true))`
+- Variante sans GUC: exposer `APP_CREATOR_EMAIL` à la DB via un paramètre sécurisé et une fonction `is_app_creator(email text)` (SECURITY DEFINER) qui compare au secret côté serveur
 
 ---
 
