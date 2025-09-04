@@ -90,7 +90,7 @@ graph LR
 - **Types** : `friends` ou `couple`
 - **Rôles** : `owner` unique / `admin` / `member`
 - **Invitations** : Code permanent modifiable, généré automatiquement
-- **Image de profil** : Avatar personnalisable pour chaque groupe
+- **Nom et image modifiables** : Nom et avatar personnalisables par owner/admin
   - Formats supportés : JPEG, PNG, WebP
   - Taille maximale : 2MB
   - Redimensionnement automatique vers plusieurs tailles
@@ -248,7 +248,7 @@ erDiagram
 
 - **Appartenance stricte** : Toute action requiert membership du groupe
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
-- **Fuseau horaire** : Planification locale, stockage UTC
+- **Fuseau horaire** : Défini à la création (non modifiable), planification locale, stockage UTC
 - **Modération centralisée** : Seul le créateur de l'app (APP_CREATOR_EMAIL) peut valider les prompts
 - **Prompts approuvés uniquement** : Les groupes ne peuvent sélectionner que des prompts avec status='approved'
 

@@ -185,9 +185,10 @@ Et si une image est fournie, elle est stockée dans image_path
 
 #### Règles métier
 
-- Image de profil facultative lors de la création
-- Formats supportés : JPEG, PNG, WebP
-- Taille maximale : 2MB
+- **Timezone fixe** : Défini à la création, non modifiable par la suite
+- **Image de profil** facultative lors de la création
+- **Formats supportés** : JPEG, PNG, WebP
+- **Taille maximale** : 2MB
 
 #### Cas limites
 
@@ -341,16 +342,20 @@ Alors quitter est bloqué jusqu'à ce que je transfère la propriété ou suppri
 
 ---
 
-### C7 — Modifier l'image de profil du groupe
+### C7 — Modifier le nom et l'image du groupe
 
 **En tant qu'** owner ou admin  
-**Je veux** changer l'image de profil du groupe  
-**Afin de** personnaliser l'identité visuelle du groupe
+**Je veux** changer le nom et/ou l'image de profil du groupe  
+**Afin de** personnaliser l'identité du groupe
 
 #### Critères d'acceptation
 
 ```gherkin
 Étant donné que je suis owner ou admin du groupe
+Quand je modifie le nom du groupe
+Alors groups.name est mis à jour
+Et updated_at du groupe est rafraîchi
+
 Quand je upload une nouvelle image de profil
 Alors image_path est mis à jour avec le nouveau chemin
 Et updated_at du groupe est rafraîchi
@@ -363,17 +368,20 @@ Et l'image est supprimée du storage
 
 #### Règles métier
 
-- Formats supportés : JPEG, PNG, WebP
-- Taille maximale : 2MB
-- Redimensionnement automatique vers plusieurs tailles
-- Suppression en cascade lors de la suppression du groupe
-- Seuls owner et admins peuvent modifier l'image
+- **Modification du nom** : Nom du groupe modifiable par owner/admin
+- **Formats image** : JPEG, PNG, WebP supportés
+- **Taille maximale** : 2MB pour les images
+- **Redimensionnement automatique** vers plusieurs tailles
+- **Suppression en cascade** lors de la suppression du groupe
+- **Permissions** : Seuls owner et admins peuvent modifier nom et image
 
 #### Cas limites
 
-- Upload échoué ⇒ conserver l'ancienne image
-- Format invalide ⇒ refuser avec message d'erreur
-- Image corrompue ⇒ refuser l'upload
+- **Nom vide** ⇒ refuser la modification
+- **Nom en double** dans les groupes de l'utilisateur ⇒ autoriser (pas d'unicité globale)
+- **Upload échoué** ⇒ conserver l'ancienne image
+- **Format invalide** ⇒ refuser avec message d'erreur
+- **Image corrompue** ⇒ refuser l'upload
 
 ---
 
@@ -1007,22 +1015,7 @@ Alors open_at/close_at sont calculés en UTC pour le jour scheduled_for
 
 ---
 
-### N2 — Changement de fuseau
-
-**En tant qu'** owner  
-**Je veux** modifier timezone  
-**Afin d'** aligner l'équipe
-
-#### Critères d'acceptation
-
-```gherkin
-Quand je change timezone
-Alors les futurs rounds utilisent le nouveau fuseau (les open_at/close_at déjà définis ne changent pas)
-```
-
----
-
-### N3 — Idempotence des jobs
+### N2 — Idempotence des jobs
 
 **En tant que** système  
 **Je veux** éviter les doublons  
