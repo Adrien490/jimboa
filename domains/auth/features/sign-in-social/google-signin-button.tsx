@@ -1,19 +1,36 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/shared/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 import { useState } from "react";
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({
+	redirectTo = "/groups",
+}: {
+	redirectTo?: string;
+}) {
 	const [isLoading, setIsLoading] = useState(false);
+	const supabase = createClient();
 
 	const handleGoogle = async () => {
 		try {
 			setIsLoading(true);
-			await authClient.signIn.social({
+
+			const { error } = await supabase.auth.signInWithOAuth({
 				provider: "google",
-				callbackURL: "/groups",
+				options: {
+					redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+					queryParams: {
+						access_type: "offline",
+						prompt: "consent",
+					},
+				},
 			});
+
+			if (error) {
+				console.error("Erreur lors de la connexion Google:", error);
+				throw error;
+			}
 		} catch (error) {
 			console.error("Erreur lors de la connexion Google:", error);
 		} finally {

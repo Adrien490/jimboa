@@ -1,28 +1,40 @@
 "use client";
 
 import { Button } from "@/shared/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { authClient } from "../../lib";
 
 export function SignInSocialForm() {
 	const searchParams = useSearchParams();
 	const callbackURL = searchParams.get("callbackURL") || "/groups";
 	const [isLoading, setIsLoading] = useState(false);
+	const supabase = createClient();
+
 	const handleLogin = async () => {
-		setIsLoading(true);
-		await authClient.signIn.social({
-			provider: "google",
-			callbackURL,
-			fetchOptions: {
-				method: "POST",
-				body: {
-					provider: "google",
-					callbackURL,
+		try {
+			setIsLoading(true);
+
+			const { data, error } = await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: {
+					redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackURL)}`,
+					queryParams: {
+						access_type: "offline",
+						prompt: "consent",
+					},
 				},
-			},
-		});
-		setIsLoading(false);
+			});
+
+			if (error) {
+				console.error("Erreur lors de la connexion Google:", error);
+				throw error;
+			}
+		} catch (error) {
+			console.error("Erreur lors de la connexion Google:", error);
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (

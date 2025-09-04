@@ -1,12 +1,12 @@
 "use server";
 
-import { auth } from "@/auth";
+import { createClient } from "@/utils/supabase/server";
 import { revalidateTag } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export async function logout() {
-	await auth.api.signOut({ headers: await headers() });
+	const supabase = await createClient();
+	await supabase.auth.signOut();
 
 	revalidateTag("is-authenticated");
 	redirect("/");

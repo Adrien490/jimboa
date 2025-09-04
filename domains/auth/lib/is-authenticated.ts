@@ -1,17 +1,12 @@
 "use server";
 
-import { cacheTag } from "next/dist/server/use-cache/cache-tag";
-import { headers } from "next/headers";
-import { auth } from "../../../auth";
+import { createClient } from "@/utils/supabase/server";
 
 export async function isAuthenticated() {
-	"use cache";
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
 
-	cacheTag("is-authenticated");
-
-	const session = await auth.api.getSession({
-		headers: await headers(),
-	});
-
-	return !!session;
+	return !!user;
 }

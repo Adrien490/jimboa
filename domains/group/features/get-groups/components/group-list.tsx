@@ -141,9 +141,9 @@ export function GroupList({
 										: "bg-gradient-to-r from-primary/20 to-primary/30"
 								}`}
 							>
-								{group?.imageUrl ? (
+								{group?.image_url ? (
 									<Image
-										src={group.imageUrl}
+										src={group.image_url}
 										alt={`Image du groupe ${group.name}`}
 										width={56}
 										height={56}

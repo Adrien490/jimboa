@@ -1,14 +1,13 @@
 "use server";
 
-import { auth } from "@/auth";
 import { ActionStatus, ServerAction } from "@/shared/types/server-action";
+import { createClient } from "@/utils/supabase/server";
 import console from "console";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { signInSocialSchema } from "./sign-in-social-schema";
 import { ResponseState } from "./types";
 
-// Interface pour typer	 la l'erreur de redirection Next.js
+// Interface pour typer la l'erreur de redirection Next.js
 interface NextRedirectError extends Error {
 	digest?: string;
 }
@@ -18,11 +17,13 @@ export const signInSocial: ServerAction<
 	typeof signInSocialSchema
 > = async (_, formData) => {
 	try {
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
-		if (session?.user?.id) {
-			console.log("⚠️ Utilisateur déjà connecté:", session.user.id);
+		const supabase = await createClient();
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (user) {
+			console.log("⚠️ Utilisateur déjà connecté:", user.id);
 			return {
 				status: ActionStatus.UNAUTHORIZED,
 				message: "Vous êtes déjà connecté",
@@ -46,20 +47,21 @@ export const signInSocial: ServerAction<
 		const { provider, callbackURL } = validation.data;
 
 		try {
-			const response = await auth.api.signInSocial({
-				body: {
-					provider,
-					callbackURL,
+			const { data, error } = await supabase.auth.signInWithOAuth({
+				provider: provider as "google",
+				options: {
+					redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback?next=${encodeURIComponent(callbackURL || "/groups")}`,
 				},
 			});
 
-			if (!response) {
+			if (error) {
 				return {
 					status: ActionStatus.ERROR,
-					message: "Aucune réponse du service d'authentification",
+					message: error.message,
 				};
 			}
-			if (!response.url) {
+
+			if (!data?.url) {
 				return {
 					status: ActionStatus.ERROR,
 					message: "URL de redirection manquante",
@@ -68,7 +70,7 @@ export const signInSocial: ServerAction<
 
 			// La redirection va lancer une erreur NEXT_REDIRECT, c'est normal
 			// Next.js utilise cette erreur en interne pour gérer les redirections
-			redirect(response.url);
+			redirect(data.url);
 		} catch (error) {
 			// Vérifier si l'erreur est liée à une redirection Next.js
 			if (
