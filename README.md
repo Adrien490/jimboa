@@ -257,7 +257,7 @@ erDiagram
 - **Génération automatique** : Code créé à la création du groupe (6 caractères alphanumériques)
 - **Permanence** : Code permanent, pas d'expiration ni de quota d'utilisation
 - **Modification** : Possibilité de régénérer un nouveau code (invalide l'ancien)
-- **Stockage sécurisé** : Hash du code stocké dans `groups.join_code` (SHA-256 + salt)
+- **Stockage direct** : Code stocké en clair dans `groups.join_code`
 - **Rate limiting** : Maximum 5 tentatives de join par IP/heure
 - **Activation** : Code utilisable uniquement si `join_enabled=true`
 

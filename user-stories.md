@@ -208,21 +208,21 @@ Et si une image est fournie, elle est stockée dans image_path
 ```gherkin
 Étant donné un groupe nouvellement créé
 Alors un code d'invitation permanent est généré automatiquement (6 caractères alphanumériques)
-Et le code est stocké en hash sécurisé dans groups.join_code (SHA-256 + salt)
+Et le code est stocké en clair dans groups.join_code
 
 Quand je régénère le code d'invitation
-Alors groups.join_code est mis à jour avec le nouveau hash
+Alors groups.join_code est mis à jour avec le nouveau code
 Et l'ancien code devient invalide immédiatement
 
 Quand je désactive les invitations (join_enabled=false)
 Alors les tentatives d'utilisation du code échouent
-Même si le code hash correspond à groups.join_code
+Même si le code correspond à groups.join_code
 ```
 
 #### Règles métier
 
 - Code permanent sans expiration ni quota d'utilisation
-- Stockage sécurisé uniquement en hash SHA-256 + salt (code original jamais stocké)
+- Stockage direct en clair dans la base de données
 - Rate limiting : maximum 5 tentatives de join par IP/heure
 - Régénération invalide instantanément l'ancien code
 
@@ -245,7 +245,7 @@ Même si le code hash correspond à groups.join_code
 Étant donné un code d'invitation valide (6 caractères alphanumériques)
 Et un groupe avec join_enabled=true
 Quand je saisis le code
-Alors le code est vérifié contre groups.join_code (comparaison de hash)
+Alors le code est vérifié contre groups.join_code (comparaison directe)
 Et j'entre dans group_members avec role='member'
 Et je reçois une confirmation de rejointe
 
@@ -257,7 +257,7 @@ Et la tentative est comptabilisée pour le rate limiting
 
 #### Règles métier
 
-- Vérification par comparaison de hash (jamais de code en clair)
+- Vérification par comparaison directe du code
 - `join_enabled` doit être true pour accepter les invitations
 - Rate limiting : maximum 5 tentatives par IP/heure
 - Messages d'erreur génériques pour éviter l'énumération
