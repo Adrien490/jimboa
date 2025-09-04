@@ -502,8 +502,8 @@ Alors aucune notif "round_open" n'est émise à l'échelle du groupe (les notifs
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné que je suis le créateur de l'app (identifié par APP_CREATOR_EMAIL dans .env)
-Quand je me connecte avec mon compte Google autorisé
+Étant donné que je suis le créateur de l'app (claim JWT `app_admin=true` OU email = `APP_CREATOR_EMAIL`)
+Quand je me connecte avec mon compte autorisé
 Alors j'accède à l'interface d'administration
 Et j'ai accès aux sections : banque globale, suggestions, modération
 Et aucun autre utilisateur ne peut accéder à cette interface
@@ -515,6 +515,13 @@ Et aucun autre utilisateur ne peut accéder à cette interface
 - Authentification via Google OAuth avec email vérifié
 - Interface séparée de l'expérience utilisateur standard
 - Logs d'accès pour traçabilité
+- Contrôle d'accès DB via RLS (non seulement côté UI)
+
+#### Notes d'implémentation (RLS)
+
+- Sans table dédiée: utiliser un claim JWT `app_admin=true` signé côté serveur
+- Exemple de politique RLS: `USING ((auth.jwt() ->> 'app_admin')::boolean = true)`
+- Si vous préférez baser l'accès sur `APP_CREATOR_EMAIL`, limitez‑vous à un gating UI (moins sûr) OU mettez en place une fonction Postgres qui lit le claim `email` et compare à une valeur de configuration (hors scope data‑model)
 
 ---
 
@@ -734,8 +741,11 @@ Et s'il n'existe toujours aucun prompt local actif, créer le round avec group_p
 #### Critères d'acceptation
 
 ```gherkin
-Quand now() >= open_at & status='scheduled'
+Quand now() >= open_at & status='scheduled' & group_prompt_id IS NOT NULL
 Alors status='open' et notif "round_open" (si autorisée)
+
+Quand now() >= open_at & status='scheduled' & group_prompt_id IS NULL
+Alors l'ouverture est différée et aucune notification n'est émise tant qu'aucun prompt n'est activé pour ce round
 ```
 
 ---
@@ -1303,12 +1313,12 @@ Et je peux seulement consulter le contenu (lecture seule)
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné un round open et que je n'ai pas encore soumis ma réponse
+Étant donné un round open et que je n'ai pas encore participé (soumission OU vote)
 Quand j'ouvre la manche
 Alors je vois uniquement le prompt et le formulaire de soumission
 Et je ne vois aucune soumission, commentaire ou vote d'autres membres
 
-Étant donné un round open et que j'ai soumis ma réponse
+Étant donné un round open et que j'ai participé (soumission OU vote)
 Quand j'ouvre la manche
 Alors je vois toutes les soumissions, commentaires et votes
 Et je peux interagir (commenter, voter si applicable)
@@ -1477,17 +1487,18 @@ Alors le commentaire est marqué comme supprimé (soft delete uniquement)
 
 ## EPIC R — Confidentialité & Données
 
-### R1 — Quitter un groupe et couper les notifs
+### R1 — Quitter un groupe et couper les notifications
 
 **En tant qu'** utilisateur  
-**Je veux** ne plus recevoir de push d'un groupe quitté  
+**Je veux** ne plus recevoir de notifications (push + email) d'un groupe quitté  
 **Afin de** préserver mon calme
 
 #### Critères d'acceptation
 
 ```gherkin
 Quand je quitte G
-Alors les envois "round_open" pour G ne me ciblent plus
+Alors aucune notification de G (push ni email) ne m'est adressée
+Et les envois "round_open" pour G ne me ciblent plus
 ```
 
 ---
