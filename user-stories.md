@@ -409,22 +409,32 @@ Et l'image de profil du groupe est supprimée du storage
 
 ## EPIC D — Réglages de groupe
 
-### D1 — Définir heure de drop & durée d'ouverture
+### D1 — Définir heure d'ouverture automatique (durée fixe 24h)
 
 **En tant qu'** owner/admin  
-**Je veux** régler drop_time et close_after_hours  
-**Afin d'** adapter la cadence
+**Je veux** régler drop_time pour l'ouverture automatique (durée fixe 24h)  
+**Afin d'** adapter l'horaire du lancement automatique quotidien
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand je définis ces champs (ou NULL pour héritage app)
-Alors les prochains rounds sont planifiés avec ces valeurs (fuseau du groupe)
+Quand je définis drop_time (ou NULL pour héritage app)
+Alors les prochaines manches s'ouvrent automatiquement à cette heure (fuseau du groupe)
+Et chaque manche dure obligatoirement 24h avant création automatique de la suivante
+Et le système gère la création/ouverture/fermeture sans intervention
 ```
+
+#### Règles métier
+
+- **Automatisation complète** : Création, ouverture et fermeture automatiques
+- **Durée de manche fixe** : exactement 24h entre ouverture et fermeture
+- **Pas de chevauchement** possible entre manches d'un même groupe
+- **Cycle perpétuel** : Une nouvelle manche se crée automatiquement 24h après fermeture
 
 #### Cas limites
 
-- Modifier le jour J n'affecte pas un round déjà open
+- Modifier drop_time n'affecte pas une manche déjà ouverte
+- Le système attend obligatoirement 24h après fermeture avant création suivante
 
 ---
 
@@ -649,20 +659,28 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 
 ## EPIC F — Cycle de vie d'une manche (round)
 
-### F1 — Planifier la manche quotidienne
+### F1 — Créer automatiquement les manches toutes les 24h
 
 **En tant que** système  
-**Je veux** garantir un round/jour/groupe  
-**Afin de** tenir la cadence
+**Je veux** créer automatiquement une nouvelle manche toutes les 24h après fermeture  
+**Afin de** maintenir un rythme quotidien sans intervention humaine
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand la veille à T (cron)
-Alors créer daily_rounds pour D+1 si absent (UNIQUE (group_id, scheduled_for))
+Quand une manche est fermée depuis exactement 24h
+Alors créer automatiquement daily_rounds avec status='scheduled'
 Et sélectionner aléatoirement un prompt local actif (group_prompts.is_active=true)
 Et éviter les prompts utilisés récemment (fenêtre glissante)
+Et programmer l'ouverture selon drop_time du groupe
 ```
+
+#### Règles métier
+
+- **Création automatique** : Pas d'intervention humaine nécessaire
+- **Rythme fixe** : Exactement 24h entre fermeture et création suivante
+- **Une seule manche active** par groupe à la fois
+- **Sélection intelligente** des prompts avec rotation
 
 ---
 
@@ -681,26 +699,28 @@ Alors status='open' et notif "round_open" (si autorisée)
 
 ---
 
-### F3 — Fermer la manche
+### F3 — Fermer la manche (après 24h exactement)
 
 **En tant que** système  
-**Je veux** passer open → closed  
-**Afin de** figer la manche
+**Je veux** passer open → closed après exactement 24h  
+**Afin de** figer la manche et permettre la suivante
 
 #### Critères d'acceptation
 
 ```gherkin
-Quand now() >= close_at & status='open'
+Quand now() >= open_at + 24h & status='open'
 Alors status='closed'
 Et cela indépendamment du nombre de participants (0, quelques-uns, ou tous)
+Et la prochaine manche peut être planifiée pour ce groupe
 ```
 
 #### Règles métier
 
-- **Fermeture automatique** à l'heure prévue, même si personne n'a participé
+- **Fermeture automatique** après exactement 24h d'ouverture
 - **Idempotent** (pas de double fermeture)
 - **Les soumissions, votes et commentaires sont figés**
 - **Pas de prolongation** même si peu de participation
+- **Durée fixe** : toujours 24h, pas de configuration variable
 
 ---
 
@@ -840,42 +860,35 @@ Et les autres membres ne le voient plus
 
 ## EPIC K — Votes (prompts type "vote")
 
-### K1 — Voter une fois par manche
+> **Principe** : 1 vote par user & par manche pour les prompts de type "vote". **Votes définitifs** : impossible de modifier son vote une fois effectué. **Auto-vote autorisé** (on peut voter pour soi-même).
+
+### K1 — Voter une fois par manche (vote définitif)
 
 **En tant que** membre  
-**Je veux** voter  
-**Afin d'** exprimer mon choix
+**Je veux** voter une seule fois de manière définitive  
+**Afin d'** exprimer mon choix sans possibilité de modification
 
 #### Critères d'acceptation
 
 ```gherkin
 Étant donné un round open de type vote
 Quand je vote {target_user_id, reason?}
-Alors round_votes (round_id, voter_id) est unique
+Alors round_votes (round_id, voter_id) est créé avec UNIQUE
+Et je ne peux plus voter ni modifier mon vote pour ce round
+Et target_user_id peut être égal à voter_id (auto-vote autorisé)
 ```
 
 #### Règles métier
 
-- `voter_id <> target_user_id`
+- **Vote définitif** : Impossible de modifier ou supprimer son vote
+- **Auto-vote autorisé** : `voter_id` peut être égal à `target_user_id`
+- **Un seul vote** par utilisateur par manche
 
 #### Cas limites
 
+- Tentative de second vote ⇒ refus avec message explicite
+- Auto-vote autorisé (voter pour soi-même)
 - Non-membre ⇒ refus
-
----
-
-### K2 — Changer mon vote avant fermeture
-
-**En tant que** membre  
-**Je veux** modifier  
-**Afin de** corriger une erreur
-
-#### Critères d'acceptation
-
-```gherkin
-Quand je renvoie un vote pendant open
-Alors l'entrée existante est mise à jour (idempotence)
-```
 
 ---
 

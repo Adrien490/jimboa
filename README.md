@@ -76,7 +76,7 @@ graph LR
 
 ### 📋 Règles fondamentales
 
-1. **Planification** : Heure locale du groupe
+1. **Planification automatique** : Création automatique toutes les 24h à l'heure locale du groupe
 2. **Ouverture** : Notification automatique à tous les membres
 3. **Participation** : Soumissions visibles après avoir soumis sa propre réponse
 4. **Interactions** : Commentaires et votes visibles après avoir soumis sa réponse
@@ -115,7 +115,7 @@ graph LR
 
 - **Soumissions** : Texte + médias, 1 par user/manche, visibles après avoir soumis sa propre réponse, définitives (pas d'édition ni suppression)
 - **Commentaires** : Discussion globale sous chaque question du jour (visible après avoir soumis)
-- **Votes** : 1 vote par manche (type "vote" uniquement)
+- **Votes** : 1 vote par manche (type "vote" uniquement), définitifs (pas de modification)
 - **Visibilité conditionnelle** : Soumissions, discussion et votes visibles uniquement après avoir soumis sa réponse
 
 ### 🔔 Notifications intelligentes
@@ -198,12 +198,12 @@ erDiagram
 
 #### 👤 Utilisateurs & Groupes
 
-| Table              | Champs principaux                                                                                   | Contraintes                         |
-| ------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **profiles**       | `id` (=auth), `display_name`, `image_path`                                                          | Lié à auth.users (Google)           |
-| **groups**         | `name`, `type` (friends\|couple), `owner_id`, `timezone`, `join_enabled`, `join_code`, `image_path` | `owner_id` → profiles, owner unique |
-| **group_members**  | `group_id`, `user_id`, `role` (owner\|admin\|member)                                                | UNIQUE(group_id, user_id)           |
-| **group_settings** | `group_id`, `drop_time`, `close_after_hours`, `notifications_enabled`                               | 1:1 avec groups                     |
+| Table              | Champs principaux                                                                                   | Contraintes                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **profiles**       | `id` (=auth), `display_name`, `image_path`                                                          | Lié à auth.users (Google)                   |
+| **groups**         | `name`, `type` (friends\|couple), `owner_id`, `timezone`, `join_enabled`, `join_code`, `image_path` | `owner_id` → profiles, owner unique         |
+| **group_members**  | `group_id`, `user_id`, `role` (owner\|admin\|member)                                                | UNIQUE(group_id, user_id)                   |
+| **group_settings** | `group_id`, `drop_time`, `notifications_enabled`                                                    | 1:1 avec groups, close_after_hours=24h fixe |
 
 #### 🎯 Prompts & Manches
 
@@ -221,7 +221,7 @@ erDiagram
 | Table           | Champs principaux                        | Contraintes                                     |
 | --------------- | ---------------------------------------- | ----------------------------------------------- |
 | **comments**    | `round_id`, `author_id`, `body`          | Discussion globale sur la question du jour      |
-| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id), CHECK(voter≠target) |
+| **round_votes** | `round_id`, `voter_id`, `target_user_id` | UNIQUE(round_id, voter_id) |
 
 #### 🔔 Notifications
 
@@ -235,14 +235,14 @@ erDiagram
 
 #### 🎯 Règles de participation
 
-| Contrainte                    | Description                                 | Implémentation                                                    |
-| ----------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
-| **1 round/jour/groupe**       | Unicité quotidienne                         | `UNIQUE(group_id, scheduled_for)`                                 |
-| **1 soumission/user/round**   | Une participation par manche, pas d'édition | `UNIQUE(round_id, author_id)`                                     |
-| **Soumission définitive**     | Pas de suppression après création           | Soumission obligatoirement conservée une fois créée               |
-| **1 vote/user/round**         | Vote unique, pas d'auto-vote                | `UNIQUE(round_id, voter_id)` + `CHECK(voter_id ≠ target_user_id)` |
-| **Visibilité conditionnelle** | Soumissions visibles après participation    | Soumissions visibles après avoir soumis sa propre réponse         |
-| **Visibilité conditionnelle** | Interactions après soumission               | Commentaires/votes visibles après avoir soumis sa réponse         |
+| Contrainte                    | Description                                  | Implémentation                                            |
+| ----------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| **1 round/jour/groupe**       | 1 manche par 24h, pas de chevauchement       | `UNIQUE(group_id, scheduled_for)`                         |
+| **1 soumission/user/round**   | Une participation par manche, pas d'édition  | `UNIQUE(round_id, author_id)`                             |
+| **Soumission définitive**     | Pas de suppression après création            | Soumission obligatoirement conservée une fois créée       |
+| **1 vote/user/round**         | Vote unique et définitif, auto-vote autorisé | `UNIQUE(round_id, voter_id)`                              |
+| **Visibilité conditionnelle** | Soumissions visibles après participation     | Soumissions visibles après avoir soumis sa propre réponse |
+| **Visibilité conditionnelle** | Interactions après soumission                | Commentaires/votes visibles après avoir soumis sa réponse |
 
 #### 🔐 Règles de sécurité
 
@@ -307,12 +307,13 @@ Quand je publie une deuxième soumission
 Alors l'action échoue avec "Une seule soumission par manche"
 ```
 
-#### Vote unique & anti-auto-vote
+#### Vote unique (auto-vote autorisé)
 
 ```gherkin
 Étant donné un round de type "vote"
-Quand je vote pour moi-même
-Alors l'action est rejetée (auto-vote interdit)
+Quand je vote (y compris pour moi-même)
+Alors le vote est enregistré (auto-vote autorisé)
+Et je ne peux plus voter une seconde fois
 ```
 
 #### Ouverture & rappel automatiques
@@ -335,25 +336,35 @@ gantt
     axisFormat %H:%M
 
     section Planification
-    Création manches J+1    :active, plan, 00:00, 00:30
+    Création automatique 24h :active, plan, 00:00, 23:59
 
     section Exécution
     Ouverture manches        :active, open, 06:00, 23:00
     Fermeture & archivage    :active, close, 06:00, 23:59
 ```
 
-#### 📅 Planification (quotidien, 00:00)
+#### 📅 Création automatique (toutes les heures)
 
 ```sql
--- Pour chaque groupe actif sans round J+1
+-- Pour chaque groupe dont la dernière manche est fermée depuis 24h
 INSERT INTO daily_rounds (group_id, prompt_id, scheduled_for, status)
-SELECT g.id, selected_prompt_id, CURRENT_DATE + 1, 'scheduled'
+SELECT g.id, selected_prompt_id, NOW()::date, 'scheduled'
 FROM groups g
+LEFT JOIN daily_rounds dr_last ON (
+  dr_last.group_id = g.id
+  AND dr_last.id = (
+    SELECT id FROM daily_rounds dr2
+    WHERE dr2.group_id = g.id
+    ORDER BY scheduled_for DESC LIMIT 1
+  )
+)
 WHERE g.is_active = true
-  AND NOT EXISTS (
-    SELECT 1 FROM daily_rounds dr
-    WHERE dr.group_id = g.id
-    AND dr.scheduled_for = CURRENT_DATE + 1
+  AND (
+    dr_last.id IS NULL -- Pas de manche précédente
+    OR (
+      dr_last.status = 'closed'
+      AND dr_last.close_at <= NOW() - INTERVAL '24 hours'
+    )
   )
 ```
 
@@ -471,7 +482,7 @@ flowchart LR
 
 ### ⚙️ Écrans secondaires
 
-- **Réglages groupe** : Heure locale, durée, notifications, type
+- **Réglages groupe** : Heure locale (durée fixe 24h), notifications, type
 - **Gestion prompts locaux** : Création/édition par owner/admin uniquement
 - **Historique** : Manches passées consultables avec tout leur contenu
 
@@ -526,7 +537,7 @@ flowchart LR
 | Type             | Description                   | Symboles                      |
 | ---------------- | ----------------------------- | ----------------------------- |
 | **Commentaires** | Discussion libre              | Texte libre                   |
-| **Votes**        | Choix dans les prompts "vote" | 1 vote/round, pas d'auto-vote |
+| **Votes**        | Choix dans les prompts "vote" | 1 vote/round, auto-vote autorisé |
 
 ## 🗓️ Roadmap Approche Hybride
 
