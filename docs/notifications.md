@@ -45,10 +45,11 @@ Sémantique:
 ### Flux de traitement
 
 1. **Trigger** : Un événement déclenche une notification (ex: ouverture de manche)
-2. **Filtrage groupe** : Vérifier `group_settings.notifications_enabled`
-3. **Filtrage utilisateur** : Vérifier `user_group_prefs.mute` pour chaque membre
-4. **Sélection canal** : dépend du type; pour `round_open` → Push uniquement; pour les autres types → Push + Email ou Email seul selon `user_group_prefs.push`
-5. **Envoi** : Traitement asynchrone via `notifications` table avec statut
+2. **Ciblage membres actifs** : Joindre `group_members` et cibler uniquement `status='active'`
+3. **Filtrage groupe** : Vérifier `group_settings.notifications_enabled`
+4. **Filtrage utilisateur** : Vérifier `user_group_prefs.mute` pour chaque membre
+5. **Sélection canal** : dépend du type; pour `round_open` → Push uniquement; pour les autres types → Push + Email ou Email seul selon `user_group_prefs.push`
+6. **Envoi** : Traitement asynchrone via `notifications` table avec statut
 
 ### Gestion des appareils
 

@@ -1333,7 +1333,8 @@ Et je peux interagir (commenter, voter si applicable)
 
 #### Cas limites
 
-- Les soumissions sont définitives et ne peuvent pas être supprimées
+- Les soumissions sont définitives pour l'auteur et ne peuvent pas être modifiées/supprimées par lui
+- La modération admin reste possible via soft delete (masquage)
 
 ---
 
