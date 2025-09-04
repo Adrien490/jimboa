@@ -24,3 +24,26 @@
 - [🗓️ Roadmap](docs/roadmap.md)
 - [⚠️ Risques & Garde-fous](docs/risks-monitoring.md)
 - [📖 Glossaire](docs/glossary.md)
+
+---
+
+## 🧩 Architecture
+
+- [🔎 Architecture Overview](docs/architecture.md)
+- [🗄️ Modèle de données (ERD)](docs/data-model.md)
+- [🔒 RLS & Security](docs/rls-policies.md)
+- [⚙️ Workflows & Jobs](docs/workflows.md)
+- [🔔 Notifications](docs/notifications.md)
+
+---
+
+## 🧭 How to navigate the docs
+
+- Start here (onboarding rapide):
+  - [🔎 Architecture Overview](docs/architecture.md)
+  - [🗄️ Modèle de données (ERD)](docs/data-model.md)
+  - [🔒 RLS & Security](docs/rls-policies.md)
+- Ensuite, selon le besoin:
+  - Orchestration des manches: [⚙️ Workflows & Jobs](docs/workflows.md)
+  - Préférences et envois: [🔔 Notifications](docs/notifications.md)
+  - Environnements & variables: [🌐 Environments & Config](docs/environments.md)
