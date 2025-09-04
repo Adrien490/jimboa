@@ -14,7 +14,7 @@
 
 ## Environnements
 
-- Local: clés de dev, outils de test (ex: Inbucket pour emails)
+- Local: clés de dev; Inbucket optionnel (pas d'email pour les notifications v1)
 - Préprod: proximités prod, jeux de données masqués
 - Prod: secrets chiffrés et accès restreint
 
@@ -24,4 +24,3 @@
 - Paramètres fuso‑horaire: Europe/Paris (calcul open/close en UTC)
 
 Voir aussi: `docs/tech-stack.md`, `docs/architecture.md`.
-

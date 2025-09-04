@@ -22,16 +22,15 @@ flowchart TD
     B -->|Oui| D{user_group_prefs.mute?}
     D -->|Oui| C
     D -->|Non| E{user_group_prefs.push?}
-    E -->|Non| F[Email uniquement]
-    E -->|Oui| G[Push + Email]
+    E -->|Non| F[Pas de push]
+    E -->|Oui| G[Push]
     G --> H[user_devices: ciblage par appareil]
 ```
 
 Sémantique:
 
-- `mute=true` bloque toute notification (push et email) pour le couple (user, group)
-- `push=false` désactive uniquement le canal push; l'email reste envoyé
-- Exception par type: pour `round_open`, l'email n'est jamais utilisé; si `push=false`, aucune notification d'ouverture n'est envoyée
+- `mute=true` bloque toute notification (push) pour le couple (user, group)
+- `push=false` désactive le canal push (aucun autre canal n'est utilisé)
 
 ## 📱 Architecture des notifications
 
@@ -48,7 +47,7 @@ Sémantique:
 2. **Ciblage membres actifs** : Joindre `group_members` et cibler uniquement `status='active'`
 3. **Filtrage groupe** : Vérifier `group_settings.notifications_enabled`
 4. **Filtrage utilisateur** : Vérifier `user_group_prefs.mute` pour chaque membre
-5. **Sélection canal** : dépend du type; pour `round_open` → Push uniquement; pour les autres types → Push + Email ou Email seul selon `user_group_prefs.push`
+5. **Canal** : Push uniquement (pas d'email)
 6. **Envoi** : Traitement asynchrone via `notifications` table avec statut
 
 ### Gestion des appareils

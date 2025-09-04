@@ -117,17 +117,16 @@ Alors un user_devices est créé/actualisé (unique par token)
 ```gherkin
 Étant donné un groupe G
 Quand je mets mute=true
-Alors aucune notification (push ni email) de G ne m'est envoyée
+Alors aucune notification push de G ne m'est envoyée
 
 Étant donné un groupe G
 Quand je mets push=false
-Alors je reçois les notifications de G par email uniquement (pas de push)
+Alors je ne reçois pas de push pour G (aucun autre canal)
 ```
 
 #### Règles métier
 
 - `user_group_prefs` unique `(user_id, group_id)`
-- Exception par type: pour `round_open`, l'email n'est jamais utilisé; si `push=false`, aucune notification d'ouverture n'est envoyée (seul le push est supporté pour ce type)
 
 ---
 
@@ -144,7 +143,7 @@ Alors je reçois les notifications de G par email uniquement (pas de push)
 Quand le scheduler l'ouvre
 Alors une notification "round_open" est émise pour chaque membre non-mute du groupe si group_settings.notifications_enabled=true
 Et si user_group_prefs.push=true alors une notification push est envoyée
-Et si user_group_prefs.push=false alors aucune notification n'est envoyée (pas d'email pour round_open)
+Et si user_group_prefs.push=false alors aucune notification n'est envoyée
 ```
 
 ---
@@ -1492,14 +1491,14 @@ Alors le commentaire est marqué comme supprimé (soft delete uniquement)
 ### R1 — Quitter un groupe et couper les notifications
 
 **En tant qu'** utilisateur  
-**Je veux** ne plus recevoir de notifications (push + email) d'un groupe quitté  
+**Je veux** ne plus recevoir de notifications push d'un groupe quitté  
 **Afin de** préserver mon calme
 
 #### Critères d'acceptation
 
 ```gherkin
 Quand je quitte G
-Alors aucune notification de G (push ni email) ne m'est adressée
+Alors aucune notification push de G ne m'est adressée
 Et les envois "round_open" pour G ne me ciblent plus
 ```
 

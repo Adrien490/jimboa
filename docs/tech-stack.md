@@ -108,7 +108,6 @@
 ### Développement local
 
 - **Supabase Studio** : Interface d'administration locale
-- **Inbucket** : Serveur de test d'emails
 - **Edge Runtime** : Environnement d'exécution Deno
 
 ### Production
