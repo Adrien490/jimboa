@@ -1554,7 +1554,7 @@ Et les médias liés sont marqués comme supprimés en cascade
 - **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
 - **Permissions** : Seuls owner/admin du groupe peuvent modérer
 - **Médias liés** : Soft delete en cascade (conservés mais masqués)
- - **Audit** : journal minimal (qui supprime quoi, quand) pour les actions de modération
+- **Audit** : journal minimal (qui supprime quoi, quand) pour les actions de modération
 
 #### Cas limites
 
@@ -1679,21 +1679,4 @@ Alors reprise possible ou relance simple (upload idempotent)
 - **1 soumission/user/round** : Clé unique `(round_id, author_id)`
 - **1 vote/user/round** : Clé unique `(round_id, voter_id)`
 
-### Architecture technique
-
-- **Base de données** : PostgreSQL avec Supabase
-- **Authentification** : Supabase Auth avec Google OAuth uniquement
-- **Stockage** : Supabase Storage pour les médias
-- **Notifications push** : Système de tokens par appareil
-- **Planificateur** : Jobs cron pour l'ouverture/fermeture des manches (pas de scoring)
-- **Fuseau horaire** : Calculs en UTC, affichage en heure française (Europe/Paris)
-
-### Stack front v1 (simplicité)
-
-- Formulaires: React Hook Form (RHF) uniquement (éviter la double pile avec TanStack Form)
-- Data fetching: Server Actions / `fetch` en RSC; SWR limité aux vues client qui en ont besoin
-- Cache côté serveur par défaut; invalider via mutations ciblées
-
 ---
-
-_Document généré le $(date) pour l'application Jimboa_
