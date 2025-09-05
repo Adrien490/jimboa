@@ -24,6 +24,7 @@
 - [🗓️ Roadmap](docs/roadmap.md)
 - [⚠️ Risques & Garde-fous](docs/risks-monitoring.md)
 - [📖 Glossaire](docs/glossary.md)
+- [🧩 Indexes & Triggers DB](docs/db-indexes-triggers.md)
 
 ---
 
@@ -34,6 +35,7 @@
 - [🔒 RLS & Security](docs/rls-policies.md)
 - [⚙️ Workflows & Jobs](docs/workflows.md)
 - [🔔 Notifications](docs/notifications.md)
+- [🧩 Indexes & Triggers DB](docs/db-indexes-triggers.md)
 
 ---
 

@@ -99,7 +99,7 @@ erDiagram
 | Table           | Champs principaux                                   | Contraintes & remarques |
 | --------------- | --------------------------------------------------- | ------------------------ |
 | **prompt_tags** | `id`, `name`, `category` (`audience`)               | Liste curatée; ex. **Audience**: `couple`, `friends`, `family`, `coworkers`, `roommates`. |
-| **prompts**     | `audience_tag_id` (NULL, FK→`prompt_tags.id`)       | V1: une seule facette utilisée (Audience). Pas de table d’association. Vérifier côté DB/app que le tag référencé a bien `category='audience'` (trigger/contrainte applicative). |
+| **prompts**     | `audience_tag_id` (NULL, FK→`prompt_tags.id`)       | V1: une seule facette utilisée (Audience). Pas de table d’association. Vérifier côté DB/app que le tag référencé a bien `category='audience'` (contrainte applicative). |
 
 #### Facette unique (Audience)
 
@@ -192,84 +192,11 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 - **Heure française fixe** : Toute l'application en Europe/Paris, planification française, stockage UTC
  
 
-## 🔒 Row Level Security (RLS) - Visibilité conditionnelle
+## 🔒 Row Level Security (RLS)
 
-**Principe** : Les interactions d'une manche ne sont visibles qu'après avoir soumis sa propre réponse.
+Les principes et l’implémentation détaillée des politiques RLS (visibilité conditionnelle, participation, rôles) sont documentés ici:
 
-### Politiques de visibilité
-
-- **`submissions`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
-- **`comments`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
-- **`round_votes`** : Visibles si le round est fermé OU si l'utilisateur a participé (soumission OU vote)
-
-### Mécanisme de gamification
-
-Cette approche crée un **effet de mystère** qui encourage la participation :
-
-1. L'utilisateur voit le prompt mais pas les réponses des autres
-2. Il doit soumettre sa propre réponse pour débloquer le contenu
-3. Une fois sa réponse soumise, tout devient visible en temps réel
-4. Après fermeture du round, tout reste consultable par tous les membres
-
-### Implémentation RLS unifiée
-
-**Fonction de participation** :
-
-```sql
-CREATE OR REPLACE FUNCTION user_has_participated(round_id UUID, user_id UUID)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM submissions s WHERE s.round_id = user_has_participated.round_id AND s.author_id = user_has_participated.user_id
-  ) OR EXISTS (
-    SELECT 1 FROM round_votes v WHERE v.round_id = user_has_participated.round_id AND v.voter_id = user_has_participated.user_id
-  );
-END;
-$$;
-```
-
-Notes RLS/bootstrapping:
-
-- La fonction est créée/possédée par le owner des tables (ex: `postgres`) et exécute avec ses privilèges (SECURITY DEFINER), évitant une boucle RLS lors des sous‑requêtes.
-- `GRANT EXECUTE ON FUNCTION user_has_participated(UUID, UUID) TO authenticated;` (et `anon` si nécessaire).
-- La politique RLS continue d'utiliser `auth.uid()` comme `user_id` d'appel: `user_has_participated(round_id, auth.uid())`.
-
-**Politique RLS type** :
-
-```sql
--- Exemple pour comments
-USING (
-  (SELECT status FROM daily_rounds WHERE id = round_id) = 'closed'
-  OR user_has_participated(round_id, auth.uid())
-)
-```
-
-## 🔐 Triggers de contrôle temporel
-
-**Objectif** : Empêcher l'édition/suppression des commentaires après fermeture du round.
-**Exception** : Les admins/owners peuvent effectuer un soft delete pour modération.
-
-### Règles de modération admin
-
-**Soft delete admin** : Mécanisme de modération après fermeture
-
-- **Champs** : `deleted_by_admin` (user_id), `deleted_at` (timestamp)
-- **Trigger exception** : Autorise UPDATE si `deleted_by_admin: NULL → NOT NULL`
-- **Affichage** : Commentaires soft deleted masqués pour tous les membres
-- **Permissions** : Seuls owner/admin du groupe peuvent modérer
-- **Traçabilité** : Conservation de l'ID du modérateur pour audit
-
-### Triggers implémentés
-
-- **`comments`** : Empêche modification/suppression auteur après fermeture, autorise soft delete admin (`deleted_by_admin`, `deleted_at`)
-- **`round_votes`** : Bloque toute modification des votes (définitifs) + validation d'intégrité à l'insertion
-- **`submissions`** : Empêche modification/suppression des soumissions, sauf soft delete admin
-- **`daily_rounds`** : Validation cohérence round ↔ prompt (même groupe)
-- **`groups`** : Normalisation automatique des `join_code` en UPPER + validation format
+- `docs/rls-policies.md`
 
 ## 🔐 Intégrité et contrôle d'accès
 
@@ -277,23 +204,35 @@ USING (
 
 **Objectif** : Empêcher soumissions/commentaires/votes d'utilisateurs non-membres du groupe.
 
-**Implémentation** : Triggers de validation ou politiques RLS vérifiant l'appartenance au groupe avant toute action.
+**Implémentation** : Politiques RLS vérifiant l'appartenance au groupe avant toute action.
 
 ### M2 - Owner unique et toujours membre
 
 **Objectif** : Garantir qu'il y a toujours exactement 1 owner par groupe.
 
-**Implémentation** : Index partiel d'unicité + triggers empêchant la suppression du dernier owner actif.
+**Implémentation** : Index partiel d'unicité (owner unique). Détails d'intégrité dans `docs/db-indexes-triggers.md`.
 
-## 📈 Index de performance
+## 📈 Index de performance (Synthèse)
 
-### Index stratégiques
+- [Rounds](docs/db-indexes-triggers.md#rounds): UNIQUE `(group_id, scheduled_for_local_date)`; `(status, open_at)`; `(status, close_at)`; `(group_id, open_at DESC)`.
+- [Prompts](docs/db-indexes-triggers.md#prompts): `(owner_group_id, status, is_enabled)`; `(scope, status)`.
+- [Groupes & Membership](docs/db-indexes-triggers.md#groupes-membership): UNIQUE `group_members (group_id, user_id)`; `group_members (group_id, user_id, status)`; `group_members (user_id)`; UNIQUE partiel owner `group_members (group_id) WHERE role='owner' AND status='active'`; `groups (owner_id)`; UNIQUE `groups (join_code)`.
+- [Interactions](docs/db-indexes-triggers.md#interactions): UNIQUE `submissions (round_id, author_id)`; `submissions (round_id, created_at)`; UNIQUE `round_votes (round_id, voter_id)`; `round_votes (round_id, target_user_id)`; `comments (round_id, created_at)`; `submission_media (submission_id)`.
+- [Notifications & Préférences](docs/db-indexes-triggers.md#notifications-preferences): `notifications (status, created_at)`; `notifications (user_id, status)`; UNIQUE `user_devices (token)`; `user_devices (user_id)`; PRIMARY KEY `user_group_prefs (user_id, group_id)`.
+- [Transferts](docs/db-indexes-triggers.md#transferts): `group_ownership_transfers (group_id, status)`; `(to_user_id, status)`.
 
-- **Activité utilisateur** : `author_id`, `voter_id`, `user_id` sur les tables d'interaction
-- **Support RLS** : Index composites `(round_id, author_id)` sur `submissions` et `(round_id, voter_id)` sur `round_votes` pour la visibilité conditionnelle
-- **Jointures fréquentes** : `(group_id, user_id, status)` pour les vérifications de membership
-- **Jobs automatisés** : Index sur `status` et `close_at` pour les rounds ouverts
-- **Notifications** : Index partiel sur les notifications non lues
+Détails et rationales: `docs/db-indexes-triggers.md`.
+
+## 🔐 Triggers — Synthèse
+
+- [Groupes](docs/db-indexes-triggers.md#groupes): `groups_join_code_normalize`; `touch_groups_updated_at`.
+- [Membership](docs/db-indexes-triggers.md#membership): `protect_last_owner`.
+- [Rounds](docs/db-indexes-triggers.md#rounds-triggers): `lock_round_snapshot_after_open`.
+- [Soumissions](docs/db-indexes-triggers.md#soumissions): `submissions_author_immutable`.
+- [Commentaires](docs/db-indexes-triggers.md#commentaires): `comments_edit_window`; `touch_comments_updated_at`.
+- [Votes](docs/db-indexes-triggers.md#votes): `votes_insert_guard`; `votes_immutable`.
+
+Détails: `docs/db-indexes-triggers.md`.
 
 ## 🗑️ Suppression en cascade
 
@@ -316,7 +255,7 @@ USING (
   - `prompts.is_enabled` (bool par défaut true) pour activer/désactiver un prompt.
   - `prompts.audience_tag_id` (FK → `prompt_tags.id`) pour la facette Audience.
   - `group_prompt_blocks(group_id, prompt_id)` avec contrainte d’unicité pour la blocklist V1.
-  - Index RLS de participation: composites sur `submissions` et `round_votes` pour décharger la fonction de participation.
+  - Index RLS de participation: composites sur `submissions` et `round_votes` pour la visibilité conditionnelle.
   - Optionnel V1.1: vue matérialisée `round_participations` (UNIQUE (round_id, user_id)) rafraîchie planifié.
 -
 Voir les fichiers de migration pour les détails d’implémentation.
