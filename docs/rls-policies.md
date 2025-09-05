@@ -165,7 +165,7 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - DELETE: cascade via suppression groupe.
 
 ### prompts
-- SELECT: prompts globaux `status='approved'`; prompts locaux du groupe (tous statuts pour UI d’admin local, filtrés côté UI pour `pending/approved/rejected/archived`).
+- SELECT: prompts globaux `status='approved'`; prompts locaux visibles aux membres du groupe propriétaire via `is_member(prompts.owner_group_id)` (tous statuts pour UI d’admin local, filtrés côté UI pour `pending/approved/rejected/archived`).
 - INSERT: local par owner/admin; suggestions locales par members (créées `status='pending'`). Global par app creator.
 - UPDATE: `status`/`is_enabled` sur prompts locaux (owner/admin). Global: app creator. Édition contenu locale: owner/admin; globale: app creator.
 - DELETE: local par owner/admin (selon politique produit); global par app creator.
@@ -179,12 +179,12 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - INSERT/DELETE: owner/admin du groupe (UNIQUE(group_id, prompt_id)).
 
 ### daily_rounds
-- SELECT: membres du groupe.
+- SELECT: membres du groupe via `is_member(daily_rounds.group_id)`.
 - INSERT/UPDATE: jobs/scheduler (service role). Les membres n’écrivent pas ces lignes.
 - DELETE: cascade via suppression du groupe.
 
 ### submissions
-- SELECT: membre `active` du groupe du round ET (round `closed` OU `user_has_participated(round_id, auth.uid())`).
+- SELECT: membre `active` du groupe du round via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = submissions.round_id))` ET (round `closed` OU `user_has_participated(round_id, auth.uid())`).
 - INSERT: membre actif du groupe (contrôle membership + statut round `open`). Unicité `(round_id, author_id)`.
 - UPDATE: auteur non autorisé (soumission définitive); owner/admin: soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
@@ -195,13 +195,13 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - UPDATE/DELETE: via opérations sur `submission` (soft delete en cascade logique au besoin).
 
 ### comments
-- SELECT: mêmes règles que `submissions` (membre `active` + fermé OU participation).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))` + fermé OU participation).
 - INSERT: membre actif du groupe ET round non fermé.
 - UPDATE: auteur avant fermeture; après fermeture: owner/admin uniquement pour soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### round_votes
-- SELECT: mêmes règles que `submissions` (membre `active` + fermé OU participation).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = round_votes.round_id))` + fermé OU participation).
 - INSERT: membre actif du groupe, round type vote, contrainte UNIQUE `(round_id, voter_id)`.
 - UPDATE/DELETE: interdits (votes définitifs; triggers bloquent toute modification/suppression).
 
