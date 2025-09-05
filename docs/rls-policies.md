@@ -57,7 +57,7 @@ GRANT EXECUTE ON FUNCTION is_member(uuid) TO authenticated;
 ```sql
 CREATE OR REPLACE FUNCTION user_has_participated(round_id UUID, user_id UUID)
 RETURNS BOOLEAN
-LANGUAGE plpgsql
+LANGUAGE plpgsql STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
@@ -69,6 +69,8 @@ BEGIN
   );
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION user_has_participated(uuid, uuid) TO authenticated;
 ```
 
 ## Politique type (ex: comments)
@@ -134,6 +136,47 @@ Voir indexes/triggers: `docs/db-indexes-triggers.md#interactions` et `docs/db-in
 - Policies `storage.objects` sur `bucket_id` + `name LIKE` + appartenance via `is_member(...)`
 - Suppressions asynchrones via table tampon `storage_deletions` + Edge Function/cron
 
+## RPC — join_group_by_code(code TEXT)
+
+```sql
+CREATE OR REPLACE FUNCTION join_group_by_code(p_code TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_code TEXT := UPPER(TRIM(p_code));
+  v_group RECORD;
+  v_result JSONB;
+BEGIN
+  -- Validation format [A-Z0-9]{6}
+  IF v_code !~ '^[A-Z0-9]{6}$' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'invalid_code_format');
+  END IF;
+
+  -- Trouver le groupe sans dépendre de RLS membership
+  SELECT id, join_enabled INTO v_group FROM groups WHERE join_code = v_code;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'invalid_code');
+  END IF;
+  IF v_group.join_enabled IS NOT TRUE THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'join_disabled');
+  END IF;
+
+  -- Insérer le membre (idempotent)
+  INSERT INTO group_members(group_id, user_id, role, status)
+  VALUES (v_group.id, auth.uid(), 'member', 'active')
+  ON CONFLICT (group_id, user_id) DO NOTHING;
+
+  v_result := jsonb_build_object('ok', true, 'group_id', v_group.id);
+  RETURN v_result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION join_group_by_code(TEXT) TO authenticated;
+```
+
 <!-- Section `group_prompt_policies` supprimée (plus de curation par prompt côté groupe) -->
 
 ## Matrix RLS (par table)
@@ -141,134 +184,101 @@ Voir indexes/triggers: `docs/db-indexes-triggers.md#interactions` et `docs/db-in
 Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur authentifié avec RLS, jobs/worker via service role non-RLS).
 
 ### profiles
+
 - SELECT: `authenticated` (lecture de base — nom/avatar). Option stricte: limiter certains champs aux membres partageant un groupe.
 - INSERT: via Auth (création automatique côté serveur).
 - UPDATE: self only (id = auth.uid()).
 - DELETE: interdit.
 
 ### groups
+
 - SELECT: membres du groupe uniquement (join via `group_members`).
 - INSERT: serveur (création groupe par un utilisateur authentifié, puis insertion membership owner).
 - UPDATE: owner/admin du groupe.
 - DELETE: owner‑only.
 
 ### group_members
+
 - SELECT: membres du groupe.
 - INSERT: via action join côté serveur (code d’invitation) ou création de groupe (owner).
 - UPDATE: rôles par owner‑only; leave self autorisé (sauf si dernier owner actif).
 - DELETE: leave self autorisé (sauf dernier owner); autres suppressions par owner/admin.
 
 ### group_settings
+
 - SELECT: membres du groupe.
 - INSERT: serveur à la création du groupe.
 - UPDATE: owner/admin.
 - DELETE: cascade via suppression groupe.
 
 ### prompts
+
 - SELECT: prompts globaux `status='approved'`; prompts locaux visibles aux membres du groupe propriétaire via `is_member(prompts.owner_group_id)` (tous statuts pour UI d’admin local, filtrés côté UI pour `pending/approved/rejected/archived`).
 - INSERT: local par owner/admin; suggestions locales par members (créées `status='pending'`). Global par app creator.
 - UPDATE: `status`/`is_enabled` sur prompts locaux (owner/admin). Global: app creator. Édition contenu locale: owner/admin; globale: app creator.
 - DELETE: local par owner/admin (selon politique produit); global par app creator.
 
 ### prompt_tags
+
 - SELECT: authenticated (lecture catalogue `audience`).
 - INSERT/UPDATE/DELETE: app creator (gestion des tags d’audience).
 
 ### group_prompt_blocks
+
 - SELECT: membres du groupe.
 - INSERT/DELETE: owner/admin du groupe (UNIQUE(group_id, prompt_id)).
 
 ### daily_rounds
+
 - SELECT: membres du groupe via `is_member(daily_rounds.group_id)`.
 - INSERT/UPDATE: jobs/scheduler (service role). Les membres n’écrivent pas ces lignes.
 - DELETE: cascade via suppression du groupe.
 
 ### submissions
+
 - SELECT: membre `active` du groupe du round via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = submissions.round_id))` ET (round `closed` OU `user_has_participated(round_id, auth.uid())`).
 - INSERT: membre actif du groupe (contrôle membership + statut round `open`). Unicité `(round_id, author_id)`.
 - UPDATE: auteur non autorisé (soumission définitive); owner/admin: soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### submission_media
+
 - SELECT: hérite de la visibilité de la `submission` par jointure.
 - INSERT: auteur de la `submission` uniquement (ou service pour import). Taille/MIME validés côté serveur.
 - UPDATE/DELETE: via opérations sur `submission` (soft delete en cascade logique au besoin).
 
 ### comments
+
 - SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))` + fermé OU participation).
 - INSERT: membre actif du groupe ET round non fermé.
 - UPDATE: auteur avant fermeture; après fermeture: owner/admin uniquement pour soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### round_votes
+
 - SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = round_votes.round_id))` + fermé OU participation).
 - INSERT: membre actif du groupe, round type vote, contrainte UNIQUE `(round_id, voter_id)`.
 - UPDATE/DELETE: interdits (votes définitifs; triggers bloquent toute modification/suppression).
 
 ### notifications
+
 - SELECT: destinataire seulement (`notifications.user_id = auth.uid()`).
 - INSERT: worker/serveur (service role) lors d’un événement.
 - UPDATE: worker (mise à jour `status`).
 - DELETE: housekeeping (service role) si nécessaire.
 
 ### user_devices
+
 - SELECT: self only.
 - INSERT/UPSERT: self only; contrainte d’unicité token globale (un token = un user).
 - UPDATE/DELETE: self only (purge token invalide par worker autorisé).
 
 ### group_ownership_transfers
+
 - SELECT: `from_user_id` OU `to_user_id` OU owner/admin de `group_id` (au minimum les deux acteurs voient la demande).
 - INSERT: owner du groupe (initiateur).
 - UPDATE: destinataire (accept/reject) via action serveur atomique.
 - DELETE: serveur (expiration/annulation) ou owner si pending.
-
-## Policies Owner/Admin (snippets)
-
-```sql
--- 1) Seul OWNER peut promouvoir/déclasser un admin
-CREATE POLICY gm_update_roles_owner_only ON group_members
-FOR UPDATE TO authenticated
-USING (is_member(group_id))
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM group_members gmo
-    WHERE gmo.group_id = group_members.group_id
-      AND gmo.user_id = auth.uid()
-      AND gmo.role = 'owner'
-      AND gmo.status = 'active'
-  )
-);
-
--- 2) Réglages de groupe: OWNER (ou OWNER+ADMIN selon produit)
-CREATE POLICY group_settings_update_owner_only ON group_settings
-FOR UPDATE TO authenticated
-USING (is_member(group_id))
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM group_members gmo
-    WHERE gmo.group_id = group_settings.group_id
-      AND gmo.user_id = auth.uid()
-      AND gmo.role = 'owner'
-      AND gmo.status = 'active'
-  )
-);
-
--- 3) Transfert de propriété: OWNER initie, destinataire accepte via action serveur
--- (Conseillé: effectuer le transfert en service role pour atomicité)
-
--- 4) Lecture join_code: vue sécurisée renvoyant join_code seulement à owner/admin
-CREATE OR REPLACE VIEW groups_secure AS
-SELECT g.id, g.name, g.image_path, g.is_active,
-       CASE WHEN EXISTS (
-         SELECT 1 FROM group_members gm
-         WHERE gm.group_id = g.id AND gm.user_id = auth.uid()
-           AND gm.status='active' AND gm.role IN ('owner','admin')
-       ) THEN g.join_code ELSE NULL END AS join_code,
-       g.owner_id, g.created_at, g.updated_at
-FROM groups g;
-
-GRANT SELECT ON groups_secure TO authenticated;
-```
 
 ## Triggers & Intégrité (résumé)
 

@@ -179,64 +179,6 @@ Et si une image est fournie, elle est stockée dans image_path
 
 ---
 
-### C4 — Autoriser la banque globale pour la sélection
-
-**En tant que** owner/admin  
-**Je veux** choisir si mon groupe peut puiser dans la banque globale  
-**Afin de** enrichir la sélection quotidienne lorsque pertinent
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un groupe G
-Quand j'active l'option "Autoriser la banque globale"
-Alors `group_settings.allow_global_prompts=true`
-Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, un snapshot inline est écrit dans `daily_rounds` (`source_prompt_id`, `resolved_*`) et associé au round
-Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size)
-
-
-Étant donné un groupe G
-Quand je désactive l'option
-Alors `group_settings.allow_global_prompts=false` et seuls les prompts locaux (scope='group', owner_group_id=G) restent éligibles
-```
-
-#### Règles métier
-
-- Le toggle `allow_global_prompts` peut être géré par l'owner ou les admins.
-
-## EPIC T — Taxonomie d’audience
-
-### T1 — Définir les tags d’audience
-
-**En tant que** app creator  
-**Je veux** disposer d’une liste de tags d’audience  
-**Afin de** classer les prompts proprement
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné des tags prédéfinis côté app creator
-Quand je crée un tag {name, category}
-Alors la catégorie est toujours `audience`
-Et “couple” / “friends” sont des exemples valides
-Et aucune autre facette n'est disponible
-```
-
-### T2 — Assigner une audience à un prompt local
-
-**En tant que** owner/admin de groupe  
-**Je veux** associer au plus un tag d’audience à un prompt local  
-**Afin de** aider l’édition/curation
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un prompt local actif
-Quand j'ouvre l’édition de l’audience
-Alors je peux sélectionner 0 ou 1 tag d’audience (ex: audience=couple)
-Et la sauvegarde garantit que le tag référencé a bien `category='audience'`
-```
-
 ### C2 — Gérer le code d'invitation permanent
 
 **En tant qu'** owner/admin  
@@ -300,6 +242,14 @@ Alors l'action échoue avec un message d'erreur générique
 - **Comparaison directe** : Match exact du code normalisé (UPPER)
 - `join_enabled` doit être true pour accepter les invitations
 - Messages d'erreur génériques pour éviter l'énumération
+
+#### Notes d'implémentation
+
+- RLS interdit `SELECT` sur `groups` aux non‑membres; utiliser une RPC `join_group_by_code(code TEXT)` (SECURITY DEFINER) qui:
+  - normalise `UPPER(code)` et valide le format `[A-Z0-9]{6}`
+  - retrouve le groupe même sans membership, vérifie `join_enabled=true`
+  - insère l'utilisateur dans `group_members` (UPSERT s'il existe déjà), puis renvoie un statut
+- Ajoutez rate‑limit et compteur d'échecs côté API, plus des logs d'audit des tentatives.
 
 #### Cas limites
 
@@ -552,6 +502,30 @@ Alors aucune notif "round_open" n'est émise à l'échelle du groupe (les notifs
 
 ## EPIC E — Prompts Hybrides (Global + Local)
 
+### E0 — Autoriser la banque globale pour la sélection (par groupe)
+
+**En tant que** owner/admin  
+**Je veux** choisir si mon groupe peut puiser dans la banque globale  
+**Afin de** enrichir la sélection quotidienne lorsque pertinent
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un groupe G
+Quand j'active l'option "Autoriser la banque globale"
+Alors `group_settings.allow_global_prompts=true`
+Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, un snapshot inline est écrit dans `daily_rounds` (`source_prompt_id`, `resolved_*`) et associé au round
+Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size)
+
+Étant donné un groupe G
+Quand je désactive l'option
+Alors `group_settings.allow_global_prompts=false` et seuls les prompts locaux (scope='group', owner_group_id=G) restent éligibles
+```
+
+#### Règles métier
+
+- Le toggle `allow_global_prompts` peut être géré par l'owner ou les admins.
+
 ### E1 — Accéder à l'interface d'administration globale (app creator uniquement)
 
 **En tant que** créateur de l'app  
@@ -794,6 +768,41 @@ Alors la blocklist du groupe est appliquée avant le tirage aléatoire
 
 ---
 
+## EPIC T — Taxonomie d’audience
+
+### T1 — Définir les tags d’audience
+
+**En tant que** app creator  
+**Je veux** disposer d’une liste de tags d’audience  
+**Afin de** classer les prompts proprement
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné des tags prédéfinis côté app creator
+Quand je crée un tag {name, category}
+Alors la catégorie est toujours `audience`
+Et “couple” / “friends” sont des exemples valides
+Et aucune autre facette n'est disponible
+```
+
+### T2 — Assigner une audience à un prompt local
+
+**En tant que** owner/admin de groupe  
+**Je veux** associer au plus un tag d’audience à un prompt local  
+**Afin de** aider l’édition/curation
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un prompt local actif
+Quand j'ouvre l’édition de l’audience
+Alors je peux sélectionner 0 ou 1 tag d’audience (ex: audience=couple)
+Et la sauvegarde garantit que le tag référencé a bien `category='audience'`
+```
+
+---
+
 ## EPIC F — Cycle de vie d'une manche (round)
 
 ### F1 — Créer automatiquement les manches quotidiennes
@@ -901,6 +910,7 @@ Et je ne peux plus créer d'autre soumission pour ce round
 
 - Tentative 2e soumission ⇒ rejet avec message explicite
 - Round fermé ⇒ création impossible
+- Round de type `vote` ⇒ création de soumission interdite (voter pour participer)
 
 ---
 
@@ -908,7 +918,7 @@ Et je ne peux plus créer d'autre soumission pour ce round
 
 **En tant que** système  
 **Je veux** utiliser Row Level Security pour contrôler la visibilité des interactions  
-**Afin d'** automatiser le gating "je ne vois rien tant que je n'ai pas soumis"
+**Afin d'** automatiser le gating "je ne vois rien tant que je n'ai pas participé"
 
 #### Critères d'acceptation
 
@@ -1112,6 +1122,8 @@ Alors l'opération réussit normalement (trigger OK)
 ## EPIC K — Votes (prompts type "vote")
 
 > **Principe** : 1 vote par user & par manche pour les prompts de type "vote". **Votes définitifs** : impossible de modifier son vote une fois effectué. **Auto-vote autorisé** (on peut voter pour soi-même).
+
+Note v1 (simplification): Les rounds de type `vote` n'acceptent pas de soumissions — participation uniquement par le vote (+ commentaires).
 
 ### K1 — Voter une fois par manche (vote définitif)
 
@@ -1542,6 +1554,7 @@ Et les médias liés sont marqués comme supprimés en cascade
 - **Traçabilité** : `deleted_by_admin` conserve l'ID du modérateur
 - **Permissions** : Seuls owner/admin du groupe peuvent modérer
 - **Médias liés** : Soft delete en cascade (conservés mais masqués)
+ - **Audit** : journal minimal (qui supprime quoi, quand) pour les actions de modération
 
 #### Cas limites
 
@@ -1594,6 +1607,28 @@ Quand je quitte G
 Alors aucune notification push de G ne m'est adressée
 Et les envois "round_open" pour G ne me ciblent plus
 ```
+
+---
+
+### R2 — Supprimer mon compte (droit à l’effacement)
+
+**En tant qu'** utilisateur  
+**Je veux** supprimer mon compte et mes données personnelles  
+**Afin de** exercer mon droit à l’effacement
+
+#### Critères d'acceptation
+
+```gherkin
+Quand je demande la suppression de mon compte
+Alors mon profil est supprimé côté Auth
+Et mes contenus personnels sont soit anonymisés (display_name/image), soit purgés selon la politique en vigueur
+Et mes tokens push sont révoqués (user_devices purgés)
+```
+
+#### Notes
+
+- Décider la politique : anonymisation des contenus référencés par d’autres (soumissions/commentaires) ou purge stricte si possible
+- Journaliser l’opération pour audit
 
 ---
 
@@ -1652,6 +1687,12 @@ Alors reprise possible ou relance simple (upload idempotent)
 - **Notifications push** : Système de tokens par appareil
 - **Planificateur** : Jobs cron pour l'ouverture/fermeture des manches (pas de scoring)
 - **Fuseau horaire** : Calculs en UTC, affichage en heure française (Europe/Paris)
+
+### Stack front v1 (simplicité)
+
+- Formulaires: React Hook Form (RHF) uniquement (éviter la double pile avec TanStack Form)
+- Data fetching: Server Actions / `fetch` en RSC; SWR limité aux vues client qui en ont besoin
+- Cache côté serveur par défaut; invalider via mutations ciblées
 
 ---
 

@@ -54,9 +54,8 @@
 
 ### Statuts des membres
 
-| Statut     | Description                     | Permissions |
-| ---------- | ------------------------------- | ----------- |
-| `active`   | Membre actif du groupe          | Toutes      |
-| `inactive` | Membre temporairement désactivé | Aucune      |
-| `banned`   | Membre banni du groupe          | Aucune      |
-| `left`     | Membre ayant quitté le groupe   | Aucune      |
+| Statut   | Description                   | Permissions |
+| -------- | ----------------------------- | ----------- |
+| `active` | Membre actif du groupe        | Toutes      |
+| `left`   | Membre ayant quitté le groupe | Aucune      |
+| `banned` | Membre banni du groupe        | Aucune      |

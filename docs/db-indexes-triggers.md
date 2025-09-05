@@ -74,7 +74,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 ### Soumissions
 <a id="soumissions"></a>
 - `submissions_author_immutable` (BEFORE UPDATE/DELETE ON submissions) — l’auteur ne peut ni éditer ni supprimer; exception: soft delete admin (`deleted_by_admin`, `deleted_at`).
-- (Optionnel) `prevent_submission_on_vote_round` — si v1 décide “pas de soumission sur un round `vote`”.
+- `prevent_submission_on_vote_round` — interdire toute soumission sur un round `vote` (v1: Option A figée).
 - `submission_media_soft_delete_cascade` (AFTER UPDATE ON submissions) — marque les médias liés supprimés si soft delete admin.
 - (Optionnel) `round_participations_upsert_from_submissions` (AFTER INSERT) — `INSERT ... ON CONFLICT DO NOTHING` sur `(round_id, user_id)`.
 
