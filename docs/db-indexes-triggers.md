@@ -20,6 +20,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 <a id="prompts"></a>
 - `prompts (owner_group_id, status, is_enabled)` — sélection locale.
 - `prompts (scope, status)` — sélection globale.
+- `prompts (audience_tag_id)` — filtrage par audience (optionnel selon usages UI).
 
 ### Groupes & Membership
 <a id="groupes-membership"></a>
@@ -28,7 +29,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 - `group_members (user_id)` — “mes groupes”.
 - UNIQUE partiel `group_members (group_id) WHERE role='owner' AND status='active'` — owner unique.
 - `groups (owner_id)` — back‑office.
-- UNIQUE `groups (join_code)` — code d’invitation (UPPER stocké).
+- UNIQUE `groups (join_code)` — code d’invitation en clair (UPPER stocké). Rate‑limit côté API.
 
 ### Interactions
 <a id="interactions"></a>
@@ -66,10 +67,13 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 ### Rounds
 <a id="rounds-triggers"></a>
 - `lock_round_snapshot_after_open` (BEFORE UPDATE ON daily_rounds) — si `status='open'`, interdit toute modif des champs snapshot `resolved_*` / `source_prompt_id`.
+- `round_open_requires_snapshot` (BEFORE UPDATE ON daily_rounds) — empêcher `status='open'` si `resolved_type IS NULL`.
 
 ### Soumissions
 <a id="soumissions"></a>
 - `submissions_author_immutable` (BEFORE UPDATE/DELETE ON submissions) — l’auteur ne peut ni éditer ni supprimer; exception: soft delete admin (`deleted_by_admin`, `deleted_at`).
+- (Optionnel) `prevent_submission_on_vote_round` — si v1 décide “pas de soumission sur un round `vote`”.
+- (Optionnel) `submission_media_soft_delete_cascade` (AFTER UPDATE ON submissions) — marque les médias liés supprimés si soft delete admin.
 
 ### Commentaires
 <a id="commentaires"></a>

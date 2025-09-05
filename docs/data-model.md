@@ -94,6 +94,13 @@ erDiagram
 | **user_group_prefs**          | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                                    |
 | **group_ownership_transfers** | `group_id`, `from_user_id`, `to_user_id`, `status`, `created_at`         | Transferts de propriété avec acceptation ; `status` (`pending`\|`accepted`\|`rejected`) |
 
+#### Sémantique v1 (simple)
+
+- `group_settings.notifications_enabled=false` coupe toutes les notifications liées au groupe.
+- `user_group_prefs.mute=true` désactive tous les canaux pour l’utilisateur sur ce groupe.
+- `user_group_prefs.push=false` désactive uniquement le push (les autres canaux éventuels restent possibles).
+- Ordre d’évaluation: group.notifications_enabled → user.mute → user.push.
+
 ### 🏷️ Taxonomie (V1)
 
 | Table           | Champs principaux                                   | Contraintes & remarques |
@@ -194,7 +201,10 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 
 ## 🔒 Row Level Security (RLS)
 
-Les principes et l’implémentation détaillée des politiques RLS (visibilité conditionnelle, participation, rôles) sont documentés ici:
+Les principes et l’implémentation détaillée des politiques RLS (visibilité conditionnelle, participation, rôles) sont documentés ici. Règle unifiée v1:
+
+- Visibilité pendant la manche: tout est masqué tant que l’utilisateur n’a pas participé (soumission OU vote). Après participation, tout devient visible.
+- Après fermeture: lecture seule pour les membres ACTUELS du groupe.
 
 - `docs/rls-policies.md`
 

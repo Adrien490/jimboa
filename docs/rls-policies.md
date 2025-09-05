@@ -2,9 +2,10 @@
 
 ## Principes
 
-- Visibilité conditionnelle: interactions visibles après participation (soumission OU vote)
-- Rôles groupe: owner/admin/member via `group_members`
-- Immutabilité sélective: votes définitifs; soumissions/comm. non éditables après fermeture (sauf soft delete admin)
+- Visibilité conditionnelle unifiée: tout (soumissions, commentaires, votes) est visible après participation, définie comme soumission OU vote.
+- Archives après fermeture: lecture seule pour les membres ACTUELS du groupe.
+- Rôles groupe: owner/admin/member via `group_members` (statut `active`).
+- Immutabilité sélective: votes définitifs; soumissions/comm. non éditables après fermeture (sauf soft delete admin).
 
 ## Fonction de participation
 
@@ -29,8 +30,19 @@ $$;
 
 ```sql
 USING (
-  (SELECT status FROM daily_rounds WHERE id = round_id) = 'closed'
-  OR user_has_participated(round_id, auth.uid())
+  /* Membre actuel du groupe du round */
+  EXISTS (
+    SELECT 1 FROM group_members gm
+    WHERE gm.group_id = (SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id)
+      AND gm.user_id = auth.uid()
+      AND gm.status = 'active'
+  )
+  AND (
+    /* Archives accessibles aux membres actuels */
+    (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
+    /* Ou visibilité après participation (soumission OU vote) */
+    OR user_has_participated(comments.round_id, auth.uid())
+  )
 )
 ```
 
@@ -111,7 +123,7 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - DELETE: cascade via suppression du groupe.
 
 ### submissions
-- SELECT: visibilité conditionnelle RLS: round `closed` OU `user_has_participated(round_id, auth.uid())`.
+- SELECT: membre `active` du groupe du round ET (round `closed` OU `user_has_participated(round_id, auth.uid())`).
 - INSERT: membre actif du groupe (contrôle membership + statut round `open`). Unicité `(round_id, author_id)`.
 - UPDATE: auteur non autorisé (soumission définitive); owner/admin: soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
@@ -122,13 +134,13 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - UPDATE/DELETE: via opérations sur `submission` (soft delete en cascade logique au besoin).
 
 ### comments
-- SELECT: visibilité conditionnelle RLS (mêmes règles que submissions).
+- SELECT: mêmes règles que `submissions` (membre `active` + fermé OU participation).
 - INSERT: membre actif du groupe ET round non fermé.
 - UPDATE: auteur avant fermeture; après fermeture: owner/admin uniquement pour soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### round_votes
-- SELECT: visibilité conditionnelle RLS (mêmes règles que submissions).
+- SELECT: mêmes règles que `submissions` (membre `active` + fermé OU participation).
 - INSERT: membre actif du groupe, round type vote, contrainte UNIQUE `(round_id, voter_id)`.
 - UPDATE/DELETE: interdits (votes définitifs; triggers bloquent toute modification/suppression).
 
