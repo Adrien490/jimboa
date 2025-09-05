@@ -90,7 +90,7 @@ erDiagram
 | Table                         | Champs principaux                                                        | Contraintes & remarques                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | **notifications**             | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`… ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`)            |
-| **user_devices**              | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `created_at`   | **UNIQUE(token)** ; 1 token ne peut appartenir qu'à un seul compte                      |
+| **user_devices**              | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `endpoint` (web), `p256dh` (web), `auth` (web), `created_at`   | **UNIQUE(token)** ; Web Push: stocker aussi `endpoint`/`p256dh`/`auth` (VAPID)                      |
 | **user_group_prefs**          | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                                    |
 | **group_ownership_transfers** | `group_id`, `from_user_id`, `to_user_id`, `status`, `created_at`         | Transferts de propriété avec acceptation ; `status` (`pending`\|`accepted`\|`rejected`) |
 
@@ -123,6 +123,12 @@ erDiagram
 Note: “couple” et “friends” sont des valeurs de la facette **Audience**. Éviter de les mélanger avec des thèmes/tons/modalités. Ne pas inclure de facette “Seasonality / Event”.
 
 Note: le tag Audience est informatif pour v1; aucune préférence d’audience au niveau groupe en v1.
+
+### (Optionnel) Participation — table d’appoint
+
+| Table                   | Champs principaux                      | Contraintes & remarques |
+| ----------------------- | -------------------------------------- | ------------------------ |
+| **round_participations**| `round_id`, `user_id`, `created_at`    | `UNIQUE(round_id, user_id)` ; alimentée par triggers sur `submissions`/`round_votes` (ou matérialisée) |
 
 ## ⚖️ Contraintes métier (DB & applicatif)
 
@@ -224,7 +230,7 @@ Les principes et l’implémentation détaillée des politiques RLS (visibilité
 
 ## 📈 Index de performance (Synthèse)
 
-- [Rounds](docs/db-indexes-triggers.md#rounds): UNIQUE `(group_id, scheduled_for_local_date)`; `(status, open_at)`; `(status, close_at)`; `(group_id, open_at DESC)`.
+- [Rounds](docs/db-indexes-triggers.md#rounds): UNIQUE `(group_id, scheduled_for_local_date)`; `(status, open_at)`; `(status, close_at)`; `(group_id, open_at DESC)`; `(group_id, source_prompt_id, open_at DESC)`.
 - [Prompts](docs/db-indexes-triggers.md#prompts): `(owner_group_id, status, is_enabled)`; `(scope, status)`.
 - [Groupes & Membership](docs/db-indexes-triggers.md#groupes-membership): UNIQUE `group_members (group_id, user_id)`; `group_members (group_id, user_id, status)`; `group_members (user_id)`; UNIQUE partiel owner `group_members (group_id) WHERE role='owner' AND status='active'`; `groups (owner_id)`; UNIQUE `groups (join_code)`.
 - [Interactions](docs/db-indexes-triggers.md#interactions): UNIQUE `submissions (round_id, author_id)`; `submissions (round_id, created_at)`; UNIQUE `round_votes (round_id, voter_id)`; `round_votes (round_id, target_user_id)`; `comments (round_id, created_at)`; `submission_media (submission_id)`.

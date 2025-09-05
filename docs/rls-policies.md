@@ -7,6 +7,51 @@
 - Rôles groupe: owner/admin/member via `group_members` (statut `active`).
 - Immutabilité sélective: votes définitifs; soumissions/comm. non éditables après fermeture (sauf soft delete admin).
 
+## Activation RLS (schéma public)
+
+Activer RLS sur toutes les tables applicatives (extrait):
+
+```sql
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prompts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prompt_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_prompt_blocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_rounds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE submission_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE round_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_group_prefs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_ownership_transfers ENABLE ROW LEVEL SECURITY;
+```
+
+## Helpers RLS
+
+### Fonction membre (factorisée)
+
+```sql
+CREATE OR REPLACE FUNCTION is_member(gid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM group_members gm
+    WHERE gm.group_id = is_member.gid
+      AND gm.user_id = auth.uid()
+      AND gm.status = 'active'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION is_member(uuid) TO authenticated;
+```
+
 ## Fonction de participation
 
 ```sql
@@ -30,13 +75,8 @@ $$;
 
 ```sql
 USING (
-  /* Membre actuel du groupe du round */
-  EXISTS (
-    SELECT 1 FROM group_members gm
-    WHERE gm.group_id = (SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id)
-      AND gm.user_id = auth.uid()
-      AND gm.status = 'active'
-  )
+  /* Membre actuel du groupe du round (factorisé) */
+  is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))
   AND (
     /* Archives accessibles aux membres actuels */
     (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
@@ -50,11 +90,13 @@ USING (
 
 - Index composites: `(round_id, author_id)` et `(round_id, voter_id)`
 - Jointures fréquentes: `(group_id, user_id, status)`
+- Anti‑répétition: `daily_rounds (group_id, source_prompt_id, open_at DESC)`
 
 ```sql
 -- Index support participation
 CREATE INDEX IF NOT EXISTS idx_submissions_round_author ON submissions(round_id, author_id);
 CREATE INDEX IF NOT EXISTS idx_round_votes_round_voter ON round_votes(round_id, voter_id);
+CREATE INDEX IF NOT EXISTS idx_daily_rounds_group_source_open_at ON daily_rounds(group_id, source_prompt_id, open_at DESC);
 
 -- (Optionnel V1.1)
 CREATE MATERIALIZED VIEW IF NOT EXISTS round_participations AS
@@ -72,6 +114,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_round_participations_unique
 - GRANT EXECUTE sur les fonctions RLS aux rôles d'application
 
 Voir aussi: `docs/data-model.md#-row-level-security-rls---visibilité-conditionnelle`.
+
+## Tables/Views auxiliaires pour la participation (optionnel v1, recommandé v1.1)
+
+Deux approches pour accélérer la règle « visible après participation »:
+
+- Table `round_participations(round_id uuid, user_id uuid, created_at timestamptz)`
+  - Remplie par triggers `AFTER INSERT` sur `submissions` et `round_votes` (UPSERT)
+  - Index/contraintes: `UNIQUE(round_id, user_id)`, index sur `(round_id)`
+- Vue matérialisée `round_participations` (UNION DISTINCT `submissions`/`round_votes`), rafraîchie périodiquement
+
+Policies deviennent: `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = ... AND rp.user_id = auth.uid())`.
+
+Voir indexes/triggers: `docs/db-indexes-triggers.md#interactions` et `docs/db-indexes-triggers.md#rounds-triggers`.
+
+## Storage (Supabase) — voir `docs/infra-setup.md`
+
+- Bucket `submissions` avec structure de chemin: `submissions/<group_id>/<round_id>/<submission_id>/<filename>`
+- Policies `storage.objects` sur `bucket_id` + `name LIKE` + appartenance via `is_member(...)`
+- Suppressions asynchrones via table tampon `storage_deletions` + Edge Function/cron
 
 <!-- Section `group_prompt_policies` supprimée (plus de curation par prompt côté groupe) -->
 

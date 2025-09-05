@@ -15,6 +15,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 - `daily_rounds (status, open_at)` — job d’ouverture.
 - `daily_rounds (status, close_at)` — job de fermeture.
 - `daily_rounds (group_id, open_at DESC)` — feed par groupe.
+- `daily_rounds (group_id, source_prompt_id, open_at DESC)` — anti‑répétition (dernier usage par prompt).
 
 ### Prompts
 <a id="prompts"></a>
@@ -39,6 +40,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 - `round_votes (round_id, target_user_id)`.
 - `comments (round_id, created_at)`.
 - `submission_media (submission_id)`.
+- (Optionnel) `round_participations (round_id, user_id) UNIQUE` + index `(round_id)` — support RLS participation performant.
 
 ### Notifications & Préférences
 <a id="notifications-preferences"></a>
@@ -74,6 +76,7 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 - `submissions_author_immutable` (BEFORE UPDATE/DELETE ON submissions) — l’auteur ne peut ni éditer ni supprimer; exception: soft delete admin (`deleted_by_admin`, `deleted_at`).
 - (Optionnel) `prevent_submission_on_vote_round` — si v1 décide “pas de soumission sur un round `vote`”.
 - (Optionnel) `submission_media_soft_delete_cascade` (AFTER UPDATE ON submissions) — marque les médias liés supprimés si soft delete admin.
+- (Optionnel) `round_participations_upsert_from_submissions` (AFTER INSERT) — `INSERT ... ON CONFLICT DO NOTHING` sur `(round_id, user_id)`.
 
 ### Commentaires
 <a id="commentaires"></a>
@@ -84,8 +87,13 @@ Ce document liste, sans SQL, les indexes et triggers recommandés pour le modèl
 <a id="votes"></a>
 - `votes_insert_guard` (BEFORE INSERT ON round_votes) — vérifie: `round.status='open'`, `daily_rounds.resolved_type='vote'`, `target_user_id` ∈ membres actifs du groupe du round.
 - `votes_immutable` (BEFORE UPDATE/DELETE ON round_votes) — votes définitifs, aucune modif/suppression.
+- (Optionnel) `round_participations_upsert_from_votes` (AFTER INSERT) — `INSERT ... ON CONFLICT DO NOTHING` sur `(round_id, user_id)`.
 
 ## Références
 - Modèle & contraintes: `docs/data-model.md`
 - RLS & sécurité: `docs/rls-policies.md`
 - Workflows (jobs): `docs/workflows.md`
+
+## Compléments
+
+- Join code en clair: garder `UNIQUE(groups.join_code)`; alternative plus simple: `citext` + index unique (unicité case‑insensitive) au lieu d’un trigger `UPPER`.
