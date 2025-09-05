@@ -24,7 +24,7 @@
 ## Décisions clés (extrait)
 
 - Heure française unique (Europe/Paris) pour la planification
-- `daily_rounds` sans FK de prompt (snapshot 1:1 via `round_prompt_instances`)
+- `daily_rounds` sans FK de prompt (snapshot inline: `source_prompt_id`, `resolved_*`)
 - `round_open` = push only (pas d'email)
 
 Voir aussi: `docs/data-model.md`, `docs/rls-policies.md`, `docs/workflows.md`, `docs/notifications.md`.

@@ -46,7 +46,7 @@ graph LR
   - **Sélection quotidienne** :
     - Par défaut: candidats = prompts locaux approuvés (`scope='group'` et `owner_group_id=G`).
     - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`), selon `global_catalog_mode`/policies.
-    - Une fois le prompt choisi, créer une **instance immuable** dans `round_prompt_instances` (snapshot du contenu).
+    - Une fois le prompt choisi, écrire un **snapshot immuable inline** dans `daily_rounds` (champs `source_prompt_id`, `resolved_*`).
     - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
 
 Filtrage audience (optionnel v1.1)
@@ -62,7 +62,7 @@ Filtrage audience (optionnel v1.1)
 - “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe).
 - Ne pas inclure de facette “Seasonality / Event”.
 
-> _Note : Le mode mixte (local + global approuvés) est configurable par groupe et s’appuie sur une instance **round_prompt_instances** (snapshot) pour rester compatible avec la RLS et les archives, sans dupliquer le catalogue._
+> _Note : Le mode mixte (local + global approuvés) est configurable par groupe et s’appuie sur un snapshot inline dans `daily_rounds` pour rester compatible avec la RLS et les archives, sans dupliquer le catalogue._
 
 ### 💬 Interactions sociales
 

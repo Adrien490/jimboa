@@ -211,8 +211,8 @@ Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts l
 Étant donné un groupe G
 Quand j'active l'option "Autoriser la banque globale"
 Alors `group_settings.allow_global_prompts=true`
-Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, une instance snapshot est créée dans `round_prompt_instances` et associée au round
-Et les filtres s'appliquent (anti-répétition N=7 via `prompt_usages`, min/max_group_size, préférence d'audience, `global_catalog_mode`/policies)
+Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, un snapshot inline est écrit dans `daily_rounds` (`source_prompt_id`, `resolved_*`) et associé au round
+Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size, préférence d'audience, `global_catalog_mode`/policies)
 
 Étant donné un groupe G
 Quand je désactive l'option
@@ -818,7 +818,7 @@ Et s'il n'existe toujours aucun prompt éligible, créer le round sans snapshot 
 Quand now() >= open_at & status='scheduled'
 Alors status='open' et notif "round_open" (si autorisée)
 
-Quand now() >= open_at & status='scheduled' & snapshot absent
+Quand now() >= open_at & status='scheduled' & snapshot absent (champs `resolved_*` non renseignés)
 Alors l'ouverture est différée et aucune notification n'est émise tant qu'aucun prompt n'est activé pour ce round
 ```
 
