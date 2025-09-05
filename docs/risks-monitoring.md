@@ -69,3 +69,34 @@
 2. **Triage** : Classification par impact
 3. **Communication** : Status page + notifications
 4. **Résolution** : Procédures documentées
+
+---
+
+## 🔭 Observabilité — Mise en œuvre
+
+### Logs applicatifs (structurés)
+- Format JSON avec `ts`, `level`, `msg`, `context` (user_id, group_id, round_id, request_id)
+- Niveaux: debug/info/warn/error; corrélation `request_id`/`job_id`
+- Redaction des données sensibles; pas de PII inutile
+
+### Traces jobs (cycle quotidien)
+- create‑rounds: groupes parcourus, rounds créés (count), échecs (liste), durée
+- open‑rounds: rounds éligibles, snapshots résolus vs impossibles (et raison), notifications créées (count), durée
+- close‑rounds: rounds fermés (count), durée
+- Advisory locks: taux de contention
+
+### Métriques envoyées
+- Compteurs: `rounds_created`, `rounds_opened`, `rounds_closed`, `notifications_sent`, `push_failures`
+- Histogrammes: latence jobs (create/open/close), latence push, temps de requêtes critiques
+- Jauges: groupes actifs, prompts éligibles moyens/jour, backlog notifications
+
+### Alertes opérationnelles
+- Job bloqué: aucune exécution depuis > 1h
+- Échec massif: >10% d’échecs dans un job (fenêtre 30 min)
+- Dérive horaire: >5 min de retard moyen à l’ouverture
+- Taux d’échec push: >20% sur une fenêtre 15 min
+
+### Stockage des logs/metrics
+- Local/dev: console + fichiers de debug
+- Prod: agrégateur (ex: Vercel/Logflare/Datadog ou équivalent), rétention 14–30 jours
+- Respect RGPD: minimiser les données, anonymiser si doute

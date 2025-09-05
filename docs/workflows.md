@@ -35,13 +35,19 @@
 - Statut de la manche : `scheduled`
 - Date atteinte : Date française courante ≥ `scheduled_for_local_date`
 - Heure atteinte : Heure française courante ≥ `drop_time` du groupe (Europe/Paris)
+- Snapshot prêt : un prompt éligible peut être résolu (cf. règle ci‑dessous)
 
 ### Actions effectuées
 
-- Transition vers le statut `open`
-- Définition de `open_at` = ZonedDateTime(scheduled_for_local_date, drop_time, "Europe/Paris") → UTC
-- Calcul de `close_at` = ZonedDateTime(scheduled_for_local_date+1, drop_time, "Europe/Paris") → UTC
-- Déclenchement des notifications aux membres (si activées et non‑mute)
+- Si un prompt éligible est résolu (snapshot écrit dans `daily_rounds`):
+  - Transition vers le statut `open`
+  - Définition de `open_at` = ZonedDateTime(scheduled_for_local_date, drop_time, "Europe/Paris") → UTC
+  - Calcul de `close_at` = ZonedDateTime(scheduled_for_local_date+1, drop_time, "Europe/Paris") → UTC
+  - Déclenchement des notifications aux membres (si activées et non‑mute)
+- Si aucun snapshot ne peut être écrit (aucun prompt éligible au moment T):
+  - Rester en `scheduled`
+  - Ne pas envoyer de notification
+  - Retenter la résolution du snapshot à chaque passage du job (5 min)
 
 ### Séquence — Ouverture `round_open`
 
@@ -56,13 +62,16 @@ sequenceDiagram
   participant Push as Push Provider
 
   Cron->>DB: SELECT rounds à ouvrir (status='scheduled' & now>=open_at)
-  Cron->>DB: UPDATE `daily_rounds` SET source_prompt_id=?, resolved_* WHERE id IN (...)
-  DB-->>Cron: liste des rounds
-  Cron->>DB: UPDATE status='open', set open_at/close_at
-  Note right of Cron: Heure française → UTC
-  Cron->>Sel: SELECT membres actifs non-mute avec push=true et group_settings.notifications_enabled=true
-  Sel-->>Cron: destinataires (user_id, group_id)
-  Cron->>NQ: INSERT notifications(type='round_open', status='pending')
+  Cron->>DB: Tentative de résolution snapshot (source_prompt_id=?, resolved_*)
+  alt Aucun prompt éligible
+    Cron-->>DB: Round reste `scheduled` (pas de notif)
+  else Snapshot écrit
+    Cron->>DB: UPDATE round → status='open' (set open_at/close_at)
+    Note right of Cron: Heure française → UTC
+    Cron->>Sel: SELECT membres actifs non-mute avec push=true et group_settings.notifications_enabled=true
+    Sel-->>Cron: destinataires (user_id, group_id)
+    Cron->>NQ: INSERT notifications(type='round_open', status='pending')
+  end
   NW->>NQ: fetch pending notifications (batch)
   NW->>Push: send push to user_devices tokens
   alt token invalide
