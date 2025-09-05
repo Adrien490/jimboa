@@ -1475,7 +1475,7 @@ Et je peux filtrer le feed par groupe pour ne voir que ses rounds
 ### O2 — Voir ma contribution et mes interactions
 
 **En tant que** membre  
-**Je veux** retrouver ce que j'ai posté/réagi/voté  
+**Je veux** retrouver ce que j'ai posté/voté  
 **Afin de** suivre mon activité
 
 #### Critères d'acceptation
@@ -1626,7 +1626,6 @@ Alors reprise possible ou relance simple (upload idempotent)
 - **1 round/jour/groupe** : Clé unique `(group_id, scheduled_for_local_date)`
 - **1 soumission/user/round** : Clé unique `(round_id, author_id)`
 - **1 vote/user/round** : Clé unique `(round_id, voter_id)`
-- **Réactions typées uniques** : Par type/user/entité
 
 ### Architecture technique
 

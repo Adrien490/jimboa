@@ -127,7 +127,6 @@ Préférence d'audience (niveau groupe)
 - **1 soumission/user/round** : `UNIQUE(round_id, author_id)`
 - **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
-- **Réactions typées uniques** : `UNIQUE(entity_type, entity_id, user_id, type)`
 - **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) avec `status='approved'` ET `is_enabled=true` + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés filtrés par `global_catalog_mode`/`group_prompt_policies`; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`.
 
 ## 🕐 Gestion des temps, fuseaux et DST

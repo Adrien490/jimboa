@@ -70,7 +70,6 @@ Filtrage audience (optionnel v1.1)
 
 - **Soumissions** : Texte + médias, 1 par user/manche, définitives
 - **Commentaires** : Discussion globale par manche (éditables/supprimables jusqu'à la fermeture)
-- **Réactions** : Réactions typées sur soumissions et commentaires (1 par type/user/entité)
 - **Votes** : 1 vote par manche (type "vote"), définitif, auto‑vote autorisé
 - **Visibilité conditionnelle** : Tout (soumissions, commentaires, votes) devient visible après sa propre soumission
 

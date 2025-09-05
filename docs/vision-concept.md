@@ -11,7 +11,7 @@
 
 ## 🎪 Concept central
 
-Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe. Les membres participent librement avec du texte/média, commentent et réagissent en temps réel. À la fermeture, la manche est archivée et reste consultable avec tout son contenu.
+Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe. Les membres participent librement avec du texte/média et commentent en temps réel. À la fermeture, la manche est archivée et reste consultable avec tout son contenu.
 
 ## 👥 Proposition de valeur & Personas
 
