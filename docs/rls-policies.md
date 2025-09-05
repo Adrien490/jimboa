@@ -46,3 +46,64 @@ USING (
 
 Voir aussi: `docs/data-model.md#-row-level-security-rls---visibilité-conditionnelle`.
 
+## Curation des prompts globaux par groupe (owner seulement)
+
+Objectif: permettre au groupe de bloquer/autoriser certains prompts globaux via `group_prompt_policies`, mais réserver la modification à l'owner.
+
+Recommandations RLS (exemples):
+
+```sql
+-- Table: group_prompt_policies
+ALTER TABLE group_prompt_policies ENABLE ROW LEVEL SECURITY;
+
+-- Lecture: visible aux membres du groupe
+CREATE POLICY gpp_select_members ON group_prompt_policies
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM group_members gm
+    WHERE gm.group_id = group_prompt_policies.group_id
+      AND gm.user_id = auth.uid()
+      AND gm.status = 'active'
+  )
+);
+
+-- Modification: réservée à l'owner
+CREATE POLICY gpp_modify_owner ON group_prompt_policies
+FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM group_members gm
+    WHERE gm.group_id = group_prompt_policies.group_id
+      AND gm.user_id = auth.uid()
+      AND gm.role = 'owner'
+      AND gm.status = 'active'
+  )
+);
+
+CREATE POLICY gpp_update_owner ON group_prompt_policies
+FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM group_members gm
+    WHERE gm.group_id = group_prompt_policies.group_id
+      AND gm.user_id = auth.uid()
+      AND gm.role = 'owner'
+      AND gm.status = 'active'
+  )
+) WITH CHECK (
+  TRUE
+);
+
+CREATE POLICY gpp_delete_owner ON group_prompt_policies
+FOR DELETE USING (
+  EXISTS (
+    SELECT 1 FROM group_members gm
+    WHERE gm.group_id = group_prompt_policies.group_id
+      AND gm.user_id = auth.uid()
+      AND gm.role = 'owner'
+      AND gm.status = 'active'
+  )
+);
+```
+
+Notes:
+- Les admins peuvent consulter mais ne peuvent pas modifier `group_prompt_policies`.
+- Réserver le per‑prompt `block/allow` à l'owner via `group_prompt_policies`.
