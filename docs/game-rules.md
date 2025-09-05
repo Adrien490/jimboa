@@ -48,7 +48,8 @@ graph LR
 #### Classification (taxonomie à facettes)
 
 - Utiliser une taxonomie à facettes pour classer les prompts et guider la sélection/filtre.
-- Facettes recommandées: Audience, Modality, Tone/Mood, Vulnerability, Topic, Safety/Age Gate, Language, Group Size Constraint.
+- Facettes recommandées: Audience.
+- Le champ `type` (`question`, `vote`, `challenge`) reste la source de vérité pour la modalité.
 - “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe).
 - Ne pas inclure de facette “Seasonality / Event”.
 

@@ -192,9 +192,10 @@ Et si une image est fournie, elle est stockée dans image_path
 ```gherkin
 Étant donné des facettes prédéfinies
 Quand je crée un tag {name, category}
-Alors il appartient à l'une des facettes autorisées {audience, modality, tone, vulnerability, time, topic, safety, language, group_size}
+Alors il appartient à l'une des facettes autorisées {audience}
 Et “couple” / “friends” sont créés dans la facette audience
 Et aucune facette “seasonality/event” n'est disponible
+Et la cardinalité par facette est respectée: au plus 1 pour audience
 ```
 
 ### T2 — Tagger un prompt local
@@ -208,7 +209,7 @@ Et aucune facette “seasonality/event” n'est disponible
 ```gherkin
 Étant donné un prompt local actif
 Quand j'ouvre l'édition des tags
-Alors je peux sélectionner plusieurs tags de différentes facettes (ex: audience=couple, tone=wholesome)
+Alors je peux sélectionner plusieurs tags de différentes facettes (ex: audience=couple)
 Et la sauvegarde garantit l'unicité des liens prompt↔tag
 ```
 
