@@ -17,13 +17,14 @@ erDiagram
     submissions ||--o{ submission_media : "médias"
 
     %% Catalogue unifié
-    prompts ||--o{ prompt_tag_links : "taggé"
-    prompt_tags ||--o{ prompt_tag_links : "tag"
+    prompt_tags ||--o{ prompts : "Audience (audience_tag_id)"
     groups ||--o{ prompts : "prompts locaux scope='group' (owner_group_id)"
 
-    %% Politiques globales par groupe (pas d'overrides)
-    groups ||--o{ group_prompt_policies : "politique par prompt"
-    prompts ||--o{ group_prompt_policies : "politique par groupe"
+    %% Blocklist V1 (pas de policies tri-state)
+    groups ||--o{ group_prompt_blocks : "blocklist"
+    prompts ||--o{ group_prompt_blocks : "bloqué dans"
+
+    %% (Plus de politiques par prompt au niveau groupe)
 
     %% Sélection, anti-répétition, snapshot
     %% v1: snapshot inline dans daily_rounds (pas de table dédiée)
@@ -70,8 +71,9 @@ erDiagram
 
 | Table                    | Champs principaux                                                                                                                                                                                                                              | Contraintes & remarques                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `is_enabled` (bool, défaut `true`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. `is_enabled` sert au on/off (surtout pour les locaux) sans confondre avec l’archivage; les prompts globaux restent principalement gouvernés par le statut. |
-| **group_prompt_policies**| `group_id`, `prompt_id`, `policy` (`default`\|`allow`\|`block`), `created_at`                                                                                                                                                                | Politique tri‑state par groupe sur les prompts globaux. UNIQUE(`group_id`,`prompt_id`). Paramétrable uniquement par l'owner du groupe (RLS/permissions).                                    |
+| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `is_enabled` (bool, défaut `true`), `audience_tag_id` (NULL, FK→`prompt_tags.id`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. `is_enabled` sert au on/off (surtout pour les locaux) sans confondre avec l’archivage; les prompts globaux restent principalement gouvernés par le statut. |
+| **group_prompt_blocks**  | `group_id`, `prompt_id`, `created_at`                                                                                                                            | V1: blocklist simple. `UNIQUE(group_id, prompt_id)` ; exclusion ponctuelle de la sélection ; pas de policy tri‑state. |
+<!-- group_prompt_policies supprimé du modèle v1 -->
 | **daily_rounds**         | `group_id`, `scheduled_for_local_date` (DATE FR), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `source_prompt_id` (UUID, NULL), `resolved_type`, `resolved_title`, `resolved_body`, `resolved_metadata` (jsonb), `resolved_tags` (jsonb), `created_at`, `updated_at` | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at`. Snapshot inline (immuable) dans `daily_rounds`; `source_prompt_id` sert aussi à l’anti‑répétition. |
 | **submissions**          | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                                                        | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`.                                                                        |
 | **submission_media**     | `submission_id`, `storage_path`, `kind` (`image`\|`video`\|`audio`\|`file`), `metadata` (jsonb), `created_at`                                                                                                                              | 0..n médias par soumission ; validations de taille/format.                                                                                                                                  |
@@ -92,22 +94,22 @@ erDiagram
 | **user_group_prefs**          | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                                    |
 | **group_ownership_transfers** | `group_id`, `from_user_id`, `to_user_id`, `status`, `created_at`         | Transferts de propriété avec acceptation ; `status` (`pending`\|`accepted`\|`rejected`) |
 
-### 🏷️ Tagging
+### 🏷️ Taxonomie (V1)
 
-| Table                | Champs principaux                                                                                                       | Contraintes & remarques                                                                         |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **prompt_tags**      | `id`, `name`, `category` (`audience`) | Taxonomie à facettes; ex. **Audience**: `couple`, `friends`, `family`, `coworkers`, `roommates` |
-| **prompt_tag_links** | `prompt_id`, `tag_id`                                                                                                    | UNIQUE(`prompt_id`,`tag_id`) ; cardinalité audience = 1 max (contrainte applicative/trigger)    |
+| Table           | Champs principaux                                   | Contraintes & remarques |
+| --------------- | --------------------------------------------------- | ------------------------ |
+| **prompt_tags** | `id`, `name`, `category` (`audience`)               | Liste curatée; ex. **Audience**: `couple`, `friends`, `family`, `coworkers`, `roommates`. |
+| **prompts**     | `audience_tag_id` (NULL, FK→`prompt_tags.id`)       | V1: une seule facette utilisée (Audience). Pas de table d’association. Vérifier côté DB/app que le tag référencé a bien `category='audience'` (trigger/contrainte applicative). |
 
-#### Taxonomie à facettes (recommandée)
+#### Facette unique (Audience)
 
 - **Audience**: couple, friends, family, coworkers, roommates…
  
  
 
-#### Cardinalité par facette (règle applicative)
+#### Cardinalité
 
-- Un seul tag par prompt pour: `audience`.
+- Un seul tag par prompt pour la facette `audience` (0 ou 1 via `audience_tag_id`).
 - `type` reste une colonne (`question`|`vote`|`challenge`) — pas de facette `modality`.
  
 
@@ -118,7 +120,7 @@ Le tag Audience est informatif pour v1, et peut devenir filtre dur v1.1 (voir pl
 Préférence d'audience (niveau groupe)
 
 - Champ: `group_settings.group_audience_tag_id` (nullable) → référence un tag de catégorie `audience`.
-- Contrainte recommandée: vérification que le tag référencé a bien `category='audience'` (via trigger/constraint applicative).
+- Contrainte recommandée: vérification que le tag référencé a bien `category='audience'` (via trigger/contrainte applicative).
 - Sélection (v1.1): si défini, filtrer/prioriser les prompts éligibles qui portent ce tag; sinon considérer tous les prompts éligibles. Fallback: si aucun prompt ne matche, revenir à l'ensemble des prompts éligibles pour ne jamais bloquer l'ouverture.
 
 ## ⚖️ Contraintes métier (DB & applicatif)
@@ -127,7 +129,7 @@ Préférence d'audience (niveau groupe)
 - **1 soumission/user/round** : `UNIQUE(round_id, author_id)`
 - **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
-- **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) avec `status='approved'` ET `is_enabled=true` + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés filtrés par `group_prompt_policies`; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`.
+- **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) avec `status='approved'` ET `is_enabled=true` + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés; exclure les prompts présents dans `group_prompt_blocks`; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`.
 
 ## 🕐 Gestion des temps, fuseaux et DST
 
@@ -294,7 +296,7 @@ USING (
 ### Index stratégiques
 
 - **Activité utilisateur** : `author_id`, `voter_id`, `user_id` sur les tables d'interaction
-- **Support RLS** : Index composites `(round_id, author_id)` pour la visibilité conditionnelle
+- **Support RLS** : Index composites `(round_id, author_id)` sur `submissions` et `(round_id, voter_id)` sur `round_votes` pour la visibilité conditionnelle
 - **Jointures fréquentes** : `(group_id, user_id, status)` pour les vérifications de membership
 - **Jobs automatisés** : Index sur `status` et `close_at` pour les rounds ouverts
 - **Notifications** : Index partiel sur les notifications non lues
@@ -313,18 +315,17 @@ USING (
 - **Suppression transitive** : Les FK des tables liées aux manches sont aussi supprimées (submissions, comments, votes, etc.)
 - **Prompts globaux conservés** : Les prompts `scope='global'` (avec `owner_group_id IS NULL`) ne sont pas affectés par la suppression d'un groupe.
 
-## 🔧 DDL — champs et index (extraits)
+## 🔧 DDL — références
 
-```sql
--- Ajout du champ d’activation simple
-ALTER TABLE prompts
-  ADD COLUMN IF NOT EXISTS is_enabled boolean NOT NULL DEFAULT true;
-
--- Sélection efficace des locaux
-CREATE INDEX IF NOT EXISTS idx_prompts_local_selection
-  ON prompts(owner_group_id, status, is_enabled)
-  WHERE scope = 'group';
-```
+- Ajouts/contraintes et index sont gérés via les migrations.
+- Références clés:
+  - `prompts.is_enabled` (bool par défaut true) pour activer/désactiver un prompt.
+  - `prompts.audience_tag_id` (FK → `prompt_tags.id`) pour la facette Audience.
+  - `group_prompt_blocks(group_id, prompt_id)` avec contrainte d’unicité pour la blocklist V1.
+  - Index RLS de participation: composites sur `submissions` et `round_votes` pour décharger la fonction de participation.
+  - Optionnel V1.1: vue matérialisée `round_participations` (UNIQUE (round_id, user_id)) rafraîchie planifié.
+-
+Voir les fichiers de migration pour les détails d’implémentation.
 
 ### Sémantique `status` vs `is_enabled`
 

@@ -47,7 +47,7 @@ graph LR
 - **Types** : `question`, `vote`, `challenge`
   - **Sélection quotidienne** :
     - Par défaut: candidats = prompts locaux approuvés ET activés (`scope='group'`, `owner_group_id=G`, `status='approved'` ET `is_enabled=true`).
-    - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`), selon les `group_prompt_policies` (définies par l'owner).
+    - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`).
     - Une fois le prompt choisi, écrire un **snapshot immuable inline** dans `daily_rounds` (champs `source_prompt_id`, `resolved_*`).
     - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
 

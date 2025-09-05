@@ -212,7 +212,7 @@ Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts l
 Quand j'active l'option "Autoriser la banque globale"
 Alors `group_settings.allow_global_prompts=true`
 Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, un snapshot inline est écrit dans `daily_rounds` (`source_prompt_id`, `resolved_*`) et associé au round
-Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size, préférence d'audience, politiques `group_prompt_policies`)
+Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size, préférence d'audience)
  
 
 Étant donné un groupe G
@@ -223,7 +223,6 @@ Alors `group_settings.allow_global_prompts=false` et seuls les prompts locaux (s
 #### Règles métier
 
 - Le toggle `allow_global_prompts` peut être géré par l'owner ou les admins.
-- Les politiques fines par prompt sur la banque globale (`group_prompt_policies` avec `policy ∈ {allow, block}`) sont paramétrables uniquement par l'owner du groupe.
 
 ## EPIC T — Taxonomie à facettes (classification)
 
