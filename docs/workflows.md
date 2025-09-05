@@ -22,7 +22,7 @@
 - **Banque globale (option groupe)** : si `group_settings.allow_global_prompts=true`, inclure des `prompts` `scope='global'` approuvés comme candidats, sans clonage; créer ensuite le snapshot inline dans `daily_rounds` à l'ouverture (resolved_*)
 - **Anti-répétition** : Exclusion des 7 derniers prompts utilisés par le groupe
 - **Blocklist** : Exclure les prompts présents dans `group_prompt_blocks` pour le groupe
-- **Filtres** : Respecter `min_group_size`/`max_group_size` et la préférence d’audience si définie
+- **Filtres** : Respecter `min_group_size`/`max_group_size`
 - **Sélection** : Choix aléatoire parmi les prompts éligibles
 - **Planification** : Pour le jour J (français) avec `scheduled_for_local_date=J`
 

@@ -97,9 +97,9 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - UPDATE: `status`/`is_enabled` sur prompts locaux (owner/admin). Global: app creator. Édition contenu locale: owner/admin; globale: app creator.
 - DELETE: local par owner/admin (selon politique produit); global par app creator.
 
-### prompt_tags / prompt_tag_links
-- SELECT: authenticated (lecture catalogue); `prompt_tag_links` visibles selon visibilité du prompt parent.
-- INSERT/UPDATE/DELETE: app creator pour tags; owner/admin pour lier des tags à un prompt local.
+### prompt_tags
+- SELECT: authenticated (lecture catalogue `audience`).
+- INSERT/UPDATE/DELETE: app creator (gestion des tags d’audience).
 
 ### group_prompt_blocks
 - SELECT: membres du groupe.

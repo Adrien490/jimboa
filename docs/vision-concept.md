@@ -24,10 +24,9 @@ Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe
 
 ### 🧩 Classification
 
-- Approche tag‑driven avec une taxonomie à facettes pour des sélections pertinentes et combinables.
-- Facettes: Audience (ex: couple, friends…).
+- Tag d’audience optionnel par prompt (ex: couple, friends…).
 - La modalité est portée par la colonne `type` (question, vote, challenge).
-- “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe). Pas de facette “Seasonality / Event”.
+- “couple” et “friends” sont des valeurs d’audience (pas un type de groupe). Pas de taxonomie multi‑facettes.
 
 ### 🎪 Jobs-to-be-done
 

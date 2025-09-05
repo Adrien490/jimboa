@@ -49,21 +49,14 @@ graph LR
     - Par défaut: candidats = prompts locaux approuvés ET activés (`scope='group'`, `owner_group_id=G`, `status='approved'` ET `is_enabled=true`).
     - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`).
     - Une fois le prompt choisi, écrire un **snapshot immuable inline** dans `daily_rounds` (champs `source_prompt_id`, `resolved_*`).
-    - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
+    - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`.
   - **Blocklist par groupe** : les owners/admins peuvent exclure des prompts de la sélection via `group_prompt_blocks`; cela n'affecte pas les archives.
 
-Filtrage audience (optionnel v1.1)
+#### Classification
 
-- Si `group_settings.group_audience_tag_id` est défini: sélectionner en priorité (ou filtrer) parmi les prompts locaux approuvés et activés taggés avec cette audience.
-- Fallback si aucun prompt ne matche: revenir à tous les prompts locaux approuvés et activés (pour garantir l'ouverture quotidienne).
-
-#### Classification (taxonomie à facettes)
-
-- Utiliser une taxonomie à facettes pour classer les prompts et guider la sélection/filtre.
-- Facettes recommandées: Audience.
+- Un seul tag d’audience optionnel par prompt (`prompts.audience_tag_id`).
 - Le champ `type` (`question`, `vote`, `challenge`) reste la source de vérité pour la modalité.
-- “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe).
-- Ne pas inclure de facette “Seasonality / Event”.
+- “couple” et “friends” sont des valeurs de l’audience (pas un type de groupe).
 
 > _Note : Le mode mixte (local + global approuvés) est configurable par groupe et s’appuie sur un snapshot inline dans `daily_rounds` pour rester compatible avec la RLS et les archives, sans dupliquer le catalogue._
 

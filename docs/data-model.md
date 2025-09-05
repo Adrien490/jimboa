@@ -65,7 +65,7 @@ erDiagram
 | **profiles**       | `id` (=auth), `display_name`, `image_url`, `created_at`, `updated_at`                                                       | FK → `auth.users(id)` ; `display_name` non vide ; `image_url` = URL absolue (Google ou Storage signée)                                                                                     |
 | **groups**         | `name`, `owner_id`, `join_enabled`, `join_code`, `image_path`, `is_active`, `created_at`, `updated_at`                      | `owner_id` → `profiles` ; **invariant owner unique** ; `join_code` en clair **UNIQUE + normalisé UPPER** ; `image_path` = chemin Storage ; **heure française fixe** ; index sur `owner_id` |
 | **group_members**  | `group_id`, `user_id`, `role` (`owner`\|`admin`\|`member`), `status` (`active`\|`inactive`\|`banned`\|`left`), `created_at` | `UNIQUE(group_id, user_id)` ; **1 seul `owner` actif** par groupe (index partiel) ; FK vers `groups` et `profiles`                                                                         |
-| **group_settings** | `group_id` (PK), `drop_time` (HH:MM, nullable pour héritage app), `notifications_enabled` (bool, défaut `true`), `allow_global_prompts` (bool, défaut `true`), `group_audience_tag_id` (NULL, FK→`prompt_tags.id`)             | 1:1 avec `groups` ; **durée de manche fixe 1 jour local (constante applicative)** ; `allow_global_prompts` active la sélection mixte ; préférence d'audience optionnelle (catégorie `audience`)                                                                                                         |
+| **group_settings** | `group_id` (PK), `drop_time` (HH:MM, nullable pour héritage app), `notifications_enabled` (bool, défaut `true`), `allow_global_prompts` (bool, défaut `true`)             | 1:1 avec `groups` ; **durée de manche fixe 1 jour local (constante applicative)** ; `allow_global_prompts` active la sélection mixte.                                                                                                         |
 
 ### 🎯 Catalogue & Manches (unifié)
 
@@ -115,13 +115,7 @@ erDiagram
 
 Note: “couple” et “friends” sont des valeurs de la facette **Audience**. Éviter de les mélanger avec des thèmes/tons/modalités. Ne pas inclure de facette “Seasonality / Event”.
 
-Le tag Audience est informatif pour v1, et peut devenir filtre dur v1.1 (voir plus bas) si tu ajoutes une préférence d’audience au niveau du groupe.
-
-Préférence d'audience (niveau groupe)
-
-- Champ: `group_settings.group_audience_tag_id` (nullable) → référence un tag de catégorie `audience`.
-- Contrainte recommandée: vérification que le tag référencé a bien `category='audience'` (via trigger/contrainte applicative).
-- Sélection (v1.1): si défini, filtrer/prioriser les prompts éligibles qui portent ce tag; sinon considérer tous les prompts éligibles. Fallback: si aucun prompt ne matche, revenir à l'ensemble des prompts éligibles pour ne jamais bloquer l'ouverture.
+Note: le tag Audience est informatif pour v1; aucune préférence d’audience au niveau groupe en v1.
 
 ## ⚖️ Contraintes métier (DB & applicatif)
 

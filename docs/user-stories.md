@@ -179,25 +179,6 @@ Et si une image est fournie, elle est stockée dans image_path
 
 ---
 
-### C3 — Définir la préférence d’audience du groupe
-
-**En tant que** owner/admin  
-**Je veux** définir/retirer une audience préférée pour mon groupe  
-**Afin de** orienter le choix quotidien des prompts (sans bloquer l’ouverture)
-
-#### Critères d'acceptation
-
-```gherkin
-Étant donné un groupe G
-Quand je choisis une audience dans les réglages
-Alors `group_settings.group_audience_tag_id` est défini avec un tag de catégorie `audience`
-Et à la sélection quotidienne v1.1, les prompts locaux approuvés et activés (`is_enabled=true`) taggés avec cette audience sont priorisés/filtrés
-Et s'il n'y en a aucun, la sélection retombe sur l'ensemble des prompts locaux approuvés et activés (fallback)
-
-Étant donné un groupe G avec une audience définie
-Quand je supprime la préférence
-Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts locaux approuvés et activés redeviennent éligibles
-```
 
 ### C4 — Autoriser la banque globale pour la sélection
 
@@ -212,7 +193,7 @@ Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts l
 Quand j'active l'option "Autoriser la banque globale"
 Alors `group_settings.allow_global_prompts=true`
 Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, un snapshot inline est écrit dans `daily_rounds` (`source_prompt_id`, `resolved_*`) et associé au round
-Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size, préférence d'audience)
+Et les filtres s'appliquent (anti-répétition N=7 via `daily_rounds.source_prompt_id`, min/max_group_size)
  
 
 Étant donné un groupe G
@@ -224,38 +205,37 @@ Alors `group_settings.allow_global_prompts=false` et seuls les prompts locaux (s
 
 - Le toggle `allow_global_prompts` peut être géré par l'owner ou les admins.
 
-## EPIC T — Taxonomie à facettes (classification)
+## EPIC T — Taxonomie d’audience
 
-### T1 — Définir les facettes et tags
+### T1 — Définir les tags d’audience
 
 **En tant que** app creator  
-**Je veux** disposer de tags catégorisés par facette  
-**Afin de** classer les prompts proprement et guider la curation
+**Je veux** disposer d’une liste de tags d’audience  
+**Afin de** classer les prompts proprement
 
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné des facettes prédéfinies
+Étant donné des tags prédéfinis côté app creator
 Quand je crée un tag {name, category}
-Alors il appartient à l'une des facettes autorisées {audience}
-Et “couple” / “friends” sont créés dans la facette audience
-Et aucune facette “seasonality/event” n'est disponible
-Et la cardinalité par facette est respectée: au plus 1 pour audience
+Alors la catégorie est toujours `audience`
+Et “couple” / “friends” sont des exemples valides
+Et aucune autre facette n'est disponible
 ```
 
-### T2 — Tagger un prompt local
+### T2 — Assigner une audience à un prompt local
 
 **En tant que** owner/admin de groupe  
-**Je veux** associer des tags (multi‑facettes) à un prompt local  
-**Afin de** faciliter la sélection et le filtrage ultérieurs
+**Je veux** associer au plus un tag d’audience à un prompt local  
+**Afin de** aider l’édition/curation
 
 #### Critères d'acceptation
 
 ```gherkin
 Étant donné un prompt local actif
-Quand j'ouvre l'édition des tags
-Alors je peux sélectionner plusieurs tags de différentes facettes (ex: audience=couple)
-Et la sauvegarde garantit l'unicité des liens prompt↔tag
+Quand j'ouvre l’édition de l’audience
+Alors je peux sélectionner 0 ou 1 tag d’audience (ex: audience=couple)
+Et la sauvegarde garantit que le tag référencé a bien `category='audience'`
 ```
 
 ### C2 — Gérer le code d'invitation permanent
@@ -801,7 +781,7 @@ Quand je clique "Débloquer"
 Alors l'entrée correspondante est supprimée de `group_prompt_blocks`
 Et le prompt redevient éligible à la sélection (sous réserve des autres filtres)
 
-Étant donné des filtres actifs (anti‑répétition N=7, audience, min/max_group_size)
+Étant donné des filtres actifs (anti‑répétition N=7, min/max_group_size)
 Quand la sélection s'exécute
 Alors la blocklist du groupe est appliquée avant le tirage aléatoire
 ```
@@ -811,7 +791,7 @@ Alors la blocklist du groupe est appliquée avant le tirage aléatoire
 - **Portée** : La blocklist affecte uniquement la sélection automatique; les rounds passés ne sont pas altérés.
 - **Candidats** : S'applique aux prompts locaux approuvés/activés et aux prompts globaux approuvés si `allow_global_prompts=true`.
 - **Unicité** : `UNIQUE(group_id, prompt_id)` empêche les doublons.
-- **Priorité** : La blocklist est appliquée en plus des autres filtres (anti‑répétition, audience, min/max_group_size).
+- **Priorité** : La blocklist est appliquée en plus des autres filtres (anti‑répétition, min/max_group_size).
 
 ---
 
@@ -833,7 +813,7 @@ Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répét
 Et programmer l'ouverture selon drop_time du groupe (heure française)
 Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
 Et si moins de N prompts actifs sont disponibles, sélectionner parmi tous les prompts actifs (la fenêtre anti‑répétition ne s'applique plus faute de volume)
-Et si après application des filtres (blocklist, audience, min/max_group_size) aucun prompt n'est éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
+Et si après application des filtres (blocklist, min/max_group_size) aucun prompt n'est éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
 ```
 
 #### Règles métier
