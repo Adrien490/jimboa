@@ -18,8 +18,10 @@
 
 ### Logique de sélection des prompts
 
-- **Source** : Prompts locaux actifs uniquement (`group_prompts.is_active = true`)
+- **Source par défaut** : Prompts locaux approuvés (`scope='group'` et `owner_group_id=G`)
+- **Banque globale (option groupe)** : si `group_settings.allow_global_prompts=true`, inclure des `prompts` `scope='global'` approuvés comme candidats (selon `global_catalog_mode`/policies), sans clonage; créer ensuite un snapshot `round_prompt_instances` à l'ouverture
 - **Anti-répétition** : Exclusion des 7 derniers prompts utilisés par le groupe
+- **Filtres** : Respecter `min_group_size`/`max_group_size` et la préférence d’audience si définie
 - **Sélection** : Choix aléatoire parmi les prompts éligibles
 - **Planification** : Pour le jour J (français) avec `scheduled_for_local_date=J`
 
@@ -52,7 +54,8 @@ sequenceDiagram
   participant NW as Notifications Worker
   participant Push as Push Provider
 
-  Cron->>DB: SELECT rounds à ouvrir (status='scheduled' & now>=open_at & group_prompt_id IS NOT NULL)
+  Cron->>DB: SELECT rounds à ouvrir (status='scheduled' & now>=open_at)
+  Cron->>DB: INSERT round_prompt_instances (snapshot du prompt retenu) pour chaque round ouvert
   DB-->>Cron: liste des rounds
   Cron->>DB: UPDATE status='open', set open_at/close_at
   Note right of Cron: Heure française → UTC
@@ -96,7 +99,8 @@ sequenceDiagram
   Note over Cron,DB: J‑1 (création)
   Cron->>DB: UPSERT daily_round (status='scheduled', scheduled_for_local_date=J)
   Note over Cron,DB: J (ouverture)
-  Cron->>DB: SELECT rounds à ouvrir (scheduled & now>=open_at & group_prompt_id IS NOT NULL)
+  Cron->>DB: SELECT rounds à ouvrir (scheduled & now>=open_at)
+  Cron->>DB: INSERT round_prompt_instances pour chaque round ouvert
   Cron->>DB: UPDATE round → status='open' (set open_at/close_at)
   Cron->>DB: INSERT notifications(type='round_open', status='pending') pour les destinataires
   NW->>NQ: Consomme et envoie push

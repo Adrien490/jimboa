@@ -43,7 +43,16 @@ graph LR
   - Membres → banque **locale** (modération owner/admin)
   - Prompts locaux → banque **globale** (modération app creator)
 - **Types** : `question`, `vote`, `challenge`
-- **Sélection quotidienne (v1)** : **Uniquement** parmi les prompts **locaux** actifs (`group_prompts.is_active=true`). La banque globale ne nourrit pas directement la sélection v1 ; elle sert de réservoir éditorial et de provenance de certains prompts locaux.
+  - **Sélection quotidienne** :
+    - Par défaut: candidats = prompts locaux approuvés (`scope='group'` et `owner_group_id=G`).
+    - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`), selon `global_catalog_mode`/policies.
+    - Une fois le prompt choisi, créer une **instance immuable** dans `round_prompt_instances` (snapshot du contenu).
+    - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
+
+Filtrage audience (optionnel v1.1)
+
+- Si `group_settings.group_audience_tag_id` est défini: sélectionner en priorité (ou filtrer) parmi les prompts locaux actifs taggés avec cette audience.
+- Fallback si aucun prompt ne matche: revenir à tous les prompts locaux actifs (pour garantir l'ouverture quotidienne).
 
 #### Classification (taxonomie à facettes)
 
@@ -53,7 +62,7 @@ graph LR
 - “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe).
 - Ne pas inclure de facette “Seasonality / Event”.
 
-> _Note : Un mode mixte (local + global approved) pourra être activé ultérieurement. Les garde‑fous et champs nécessaires sont déjà prévus._
+> _Note : Le mode mixte (local + global approuvés) est configurable par groupe et s’appuie sur une instance **round_prompt_instances** (snapshot) pour rester compatible avec la RLS et les archives, sans dupliquer le catalogue._
 
 ### 💬 Interactions sociales
 

@@ -111,7 +111,8 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 - Réglages owner/admin:
   - drop_time (heure France)
   - notifications du groupe (on/off)
-  - facettes/tags favoris du groupe (Audience)
+  - Audience du groupe (préférence optionnelle)
+  - Source de sélection des prompts: **Locaux uniquement** ou **Locaux + Catalogue global** (snapshot à l'ouverture)
   - modifier nom/image (suppression Storage en arrière‑plan)
   - rôles (promouvoir/dépromouvoir)
   - supprimer groupe (confirmation + conséquences)

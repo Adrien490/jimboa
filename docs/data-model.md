@@ -8,24 +8,43 @@ erDiagram
     groups ||--|| group_settings : "paramètres"
     groups ||--o{ group_members : "contient"
     groups ||--o{ daily_rounds : "manches"
-    groups ||--o{ group_prompts : "prompts locaux"
-    global_prompts ||--o{ group_prompts : "provenance (optionnelle)"
-    profiles ||--o{ group_prompt_suggestions : "suggère vers groupe"
-    group_prompts ||--o{ global_prompt_suggestions : "suggéré vers global"
-    profiles ||--o{ global_prompt_suggestions : "suggère vers global"
-    profiles ||--o{ global_prompts : "créateur/modérateur"
-    profiles ||--o{ group_prompts : "créateur local"
-    daily_rounds ||--o{ submissions : "soumissions"
-    daily_rounds ||--o{ round_votes : "votes"
     profiles ||--o{ submissions : "auteur"
     profiles ||--o{ comments : "commentaire"
     profiles ||--o{ round_votes : "voteur"
+    daily_rounds ||--o{ submissions : "soumissions"
+    daily_rounds ||--o{ round_votes : "votes"
     daily_rounds ||--o{ comments : "discussion globale"
     submissions ||--o{ submission_media : "médias"
-    %% Reactions supprimées
-    global_prompts ||--o{ prompt_tag_links : "taggé"
-    group_prompts ||--o{ prompt_tag_links : "taggé"
+
+    %% Catalogue unifié
+    prompts ||--o{ prompt_tag_links : "taggé"
     prompt_tags ||--o{ prompt_tag_links : "tag"
+    groups ||--o{ prompts : "prompts locaux scope='group' (owner_group_id)"
+
+    %% Politiques globales par groupe (pas d'overrides)
+    groups ||--o{ group_prompt_policies : "politique par prompt"
+    prompts ||--o{ group_prompt_policies : "politique par groupe"
+
+    %% Sélection, anti-répétition, snapshot
+    groups ||--o{ prompt_usages : "historique par groupe"
+    prompts ||--o{ prompt_usages : "utilisé"
+    daily_rounds ||--|| round_prompt_instances : "snapshot (1:1)"
+    prompts ||--o{ round_prompt_instances : "source du snapshot"
+
+    %% Suggestions
+    profiles ||--o{ prompt_suggestions : "suggère"
+    groups ||--o{ prompt_suggestions : "vers groupe (scope='group')"
+    prompts ||--o{ prompt_suggestions : "promotion/itération (facultatif)"
+
+    %% Notifications & préférences
+    profiles ||--o{ user_devices : "appareils"
+    profiles ||--o{ user_group_prefs : "préférences"
+    groups ||--o{ user_group_prefs : "pour groupe"
+    profiles ||--o{ notifications : "destinataire"
+    groups ||--o{ notifications : "contexte"
+    groups ||--o{ group_ownership_transfers : "transferts de propriété"
+    profiles ||--o{ group_ownership_transfers : "from_user_id"
+    profiles ||--o{ group_ownership_transfers : "to_user_id"
 ```
 
 ## 📱 Notifications & Préférences
@@ -51,19 +70,19 @@ erDiagram
 | **profiles**       | `id` (=auth), `display_name`, `image_url`, `created_at`, `updated_at`                                                       | FK → `auth.users(id)` ; `display_name` non vide ; `image_url` = URL absolue (Google ou Storage signée)                                                                                     |
 | **groups**         | `name`, `owner_id`, `join_enabled`, `join_code`, `image_path`, `is_active`, `created_at`, `updated_at`                      | `owner_id` → `profiles` ; **invariant owner unique** ; `join_code` en clair **UNIQUE + normalisé UPPER** ; `image_path` = chemin Storage ; **heure française fixe** ; index sur `owner_id` |
 | **group_members**  | `group_id`, `user_id`, `role` (`owner`\|`admin`\|`member`), `status` (`active`\|`inactive`\|`banned`\|`left`), `created_at` | `UNIQUE(group_id, user_id)` ; **1 seul `owner` actif** par groupe (index partiel) ; FK vers `groups` et `profiles`                                                                         |
-| **group_settings** | `group_id` (PK), `drop_time` (HH:MM, nullable pour héritage app), `notifications_enabled` (bool, défaut `true`)             | 1:1 avec `groups` ; **durée de manche fixe 1 jour local (constante applicative)**                                                                                                          |
+| **group_settings** | `group_id` (PK), `drop_time` (HH:MM, nullable pour héritage app), `notifications_enabled` (bool, défaut `true`), `allow_global_prompts` (bool, défaut `true`), `group_audience_tag_id` (NULL, FK→`prompt_tags.id`)             | 1:1 avec `groups` ; **durée de manche fixe 1 jour local (constante applicative)** ; `allow_global_prompts` active la sélection mixte via clonage ; préférence d'audience optionnelle (catégorie tag = `audience`)                                                                                                         |
 
-### 🎯 Prompts & Manches
+### 🎯 Catalogue & Manches (unifié)
 
-| Table                         | Champs principaux                                                                                                                                                                                             | Contraintes & remarques                                                                                                                                                                                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **global_prompts**            | `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `status` (`pending`\|`approved`\|`rejected`\|`archived`), `created_by`, `reviewed_by`, `reviewed_at`, `feedback`, `metadata` (jsonb), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_at` | Banque globale curatée ; **v1 non utilisée pour la sélection quotidienne** ; `min/max_group_size` = filtres durs optionnels                                                                                                                                                                              |
-| **group_prompts**             | `group_id`, `type`, `title`, `body`, `is_active` (bool), `cloned_from_global` (nullable), `created_by`, `metadata` (jsonb), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_at`, `updated_at`                                                        | Prompts locaux (créés par owner/admin). `cloned_from_global` = provenance _optionnelle_ (non clonable en UI v1) ; `min/max_group_size` = filtres durs                                                                                                                                        |
-| **group_prompt_suggestions**  | `group_id`, `suggested_by`, `title`, `body`, `type`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                     | Suggestions **membres → banque locale** (modération owner/admin)                                                                                                                                                                                        |
-| **global_prompt_suggestions** | `group_prompt_id`, `suggested_by`, `status` (`pending`\|`approved`\|`rejected`), `feedback`, `created_at`, `updated_at`                                                                                       | Suggestions **prompts locaux → banque globale** (modération app creator)                                                                                                                                                                                |
-| **daily_rounds**              | `group_id`, `group_prompt_id` (nullable), `scheduled_for_local_date` (DATE), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `created_at`, `updated_at`          | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at` ; `group_prompt_id` peut rester `NULL` en fallback si aucun prompt actif n'est disponible à J-1 ; **pas de lien direct vers `global_prompts`** |
-| **submissions**               | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                         | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`                                                                                                                                     |
-| **submission_media**          | `submission_id`, `storage_path`, `kind` (`image`\|`video`\|`audio`\|`file`), `metadata` (jsonb), `created_at`                                                                                                 | 0..n médias par soumission ; validations de taille/format                                                                                                                                                                                               |
+| Table                    | Champs principaux                                                                                                                                                                                                                              | Contraintes & remarques                                                                                                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. Les prompts globaux sont modérés et partagés; pas d’édition locale du texte pour les globaux.                           |
+| **group_prompt_policies**| `group_id`, `prompt_id`, `policy` (`default`\|`allow`\|`block`), `created_at`                                                                                                                                                                | Politique tri‑state par groupe sur les prompts globaux. UNIQUE(`group_id`,`prompt_id`).                                                                                                    |
+| **prompt_usages**        | `group_id`, `prompt_id`, `used_on_date`                                                                                                                                                                                                       | PK (`group_id`,`prompt_id`,`used_on_date`). Sert à l’anti‑répétition (fenêtre N).                                                                                                          |
+| **round_prompt_instances** | `round_id` (PK), `prompt_id`, `resolved_type`, `resolved_title`, `resolved_body`, `resolved_metadata` (jsonb), `resolved_tags` (jsonb), `created_at`                                                                                          | Snapshot immuable de ce que les membres voient pour la manche.                                                                                                                              |
+| **daily_rounds**         | `group_id`, `scheduled_for_local_date` (DATE FR), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `created_at`, `updated_at`                                                                    | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at`. Aucune FK directe vers prompt: le snapshot fait foi.                              |
+| **submissions**          | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                                                        | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`.                                                                        |
+| **submission_media**     | `submission_id`, `storage_path`, `kind` (`image`\|`video`\|`audio`\|`file`), `metadata` (jsonb), `created_at`                                                                                                                              | 0..n médias par soumission ; validations de taille/format.                                                                                                                                  |
 
 ### 💬 Interactions
 
@@ -86,7 +105,7 @@ erDiagram
 | Table                | Champs principaux                                                                                                       | Contraintes & remarques                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | **prompt_tags**      | `id`, `name`, `category` (`audience`) | Taxonomie à facettes; ex. **Audience**: `couple`, `friends`, `family`, `coworkers`, `roommates` |
-| **prompt_tag_links** | `prompt_id`, `scope` (`global`\|`group`), `tag_id`                                                                      | Lien polymorphe : (`scope`, `prompt_id`) + `tag_id` unique                                      |
+| **prompt_tag_links** | `prompt_id`, `tag_id`                                                                                                    | UNIQUE(`prompt_id`,`tag_id`) ; cardinalité audience = 1 max (contrainte applicative/trigger)    |
 
 #### Taxonomie à facettes (recommandée)
 
@@ -102,6 +121,14 @@ erDiagram
 
 Note: “couple” et “friends” sont des valeurs de la facette **Audience**. Éviter de les mélanger avec des thèmes/tons/modalités. Ne pas inclure de facette “Seasonality / Event”.
 
+Le tag Audience est informatif pour v1, et peut devenir filtre dur v1.1 (voir plus bas) si tu ajoutes une préférence d’audience au niveau du groupe.
+
+Préférence d'audience (niveau groupe)
+
+- Champ: `group_settings.group_audience_tag_id` (nullable) → référence un tag de catégorie `audience`.
+- Contrainte recommandée: vérification que le tag référencé a bien `category='audience'` (via trigger/constraint applicative).
+- Sélection (v1.1): si défini, filtrer/prioriser les prompts éligibles qui portent ce tag; sinon considérer tous les prompts éligibles. Fallback: si aucun prompt ne matche, revenir à l'ensemble des prompts éligibles pour ne jamais bloquer l'ouverture.
+
 ## ⚖️ Contraintes métier (DB & applicatif)
 
 - **1 round/jour/groupe** : `UNIQUE(group_id, scheduled_for_local_date)`
@@ -109,7 +136,7 @@ Note: “couple” et “friends” sont des valeurs de la facette **Audience**.
 - **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
 - **Réactions typées uniques** : `UNIQUE(entity_type, entity_id, user_id, type)`
-- **Sélection quotidienne v1** : prompts **locaux** avec `is_active=true` ; exclusion des `N` derniers prompts utilisés par le groupe (fenêtre glissante)
+- **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) approuvés + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés filtrés par `global_catalog_mode`/`group_prompt_policies` ; anti‑répétition via `prompt_usages` (fenêtre N)
 
 ## 🕐 Gestion des temps, fuseaux et DST
 
@@ -169,14 +196,14 @@ Le calcul `close_at = open_at + INTERVAL '24 hours'` pose problème lors des cha
 - Paramétrable via constante applicative
 - Évite la monotonie tout en permettant la rotation
 - Si moins de N prompts actifs, sélection parmi tous les disponibles
-- Si aucun prompt local actif n'est disponible à J-1, créer le `daily_round` avec `group_prompt_id=NULL` et retenter la sélection à l'ouverture; aucune notification n'est envoyée tant qu'aucun prompt n'est activé
+- Si aucun prompt éligible n'est disponible à J-1, créer le `daily_round` en `scheduled` sans snapshot et retenter la sélection à l'ouverture; aucune notification n'est envoyée tant que le snapshot n'est pas créé
 
 ## 🔐 Règles de sécurité
 
 - **Appartenance stricte** : Toute action (soumettre/commenter/voter) requiert membership du groupe
 - **Owner unique** : Exactement 1 owner par groupe, non révoquable sans transfert
 - **Heure française fixe** : Toute l'application en Europe/Paris, planification française, stockage UTC
-- **Prompts éligibles v1** : **seulement** `group_prompts.is_active=true`
+ 
 
 ## 🔒 Row Level Security (RLS) - Visibilité conditionnelle
 
@@ -287,8 +314,8 @@ USING (
   - `group_members.group_id` → suppression des membres
   - `group_settings.group_id` → suppression des paramètres
   - `daily_rounds.group_id` → suppression des manches
-  - `group_prompts.group_id` → suppression des prompts locaux
-  - `group_prompt_suggestions.group_id` → suppression des suggestions locales
+  - `prompts.owner_group_id` → suppression des prompts locaux
+  - `prompt_suggestions.target_group_id` → suppression des suggestions locales
   - `group_ownership_transfers.group_id` → suppression des transferts
   - `user_group_prefs.group_id` → suppression des préférences
   - `notifications.group_id` → suppression des notifications

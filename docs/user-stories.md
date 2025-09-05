@@ -179,6 +179,46 @@ Et si une image est fournie, elle est stockée dans image_path
 
 ---
 
+### C3 — Définir la préférence d’audience du groupe
+
+**En tant que** owner/admin  
+**Je veux** définir/retirer une audience préférée pour mon groupe  
+**Afin de** orienter le choix quotidien des prompts (sans bloquer l’ouverture)
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un groupe G
+Quand je choisis une audience dans les réglages
+Alors `group_settings.group_audience_tag_id` est défini avec un tag de catégorie `audience`
+Et à la sélection quotidienne v1.1, les prompts locaux actifs taggés avec cette audience sont priorisés/filtrés
+Et s'il n'y en a aucun, la sélection retombe sur l'ensemble des prompts locaux actifs (fallback)
+
+Étant donné un groupe G avec une audience définie
+Quand je supprime la préférence
+Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts locaux actifs redeviennent éligibles
+```
+
+### C4 — Autoriser la banque globale pour la sélection
+
+**En tant que** owner/admin  
+**Je veux** choisir si mon groupe peut puiser dans la banque globale  
+**Afin de** enrichir la sélection quotidienne lorsque pertinent
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un groupe G
+Quand j'active l'option "Autoriser la banque globale"
+Alors `group_settings.allow_global_prompts=true`
+Et à l'ouverture, si un prompt global approuvé est retenu comme candidat, une instance snapshot est créée dans `round_prompt_instances` et associée au round
+Et les filtres s'appliquent (anti-répétition N=7 via `prompt_usages`, min/max_group_size, préférence d'audience, `global_catalog_mode`/policies)
+
+Étant donné un groupe G
+Quand je désactive l'option
+Alors `group_settings.allow_global_prompts=false` et seuls les prompts locaux (scope='group', owner_group_id=G) restent éligibles
+```
+
 ## EPIC T — Taxonomie à facettes (classification)
 
 ### T1 — Définir les facettes et tags
@@ -453,8 +493,8 @@ Et toutes les données liées sont automatiquement supprimées :
   - group_members (membres)
   - group_settings (paramètres)
   - daily_rounds (manches) → et leurs FK (submissions, comments, votes)
-  - group_prompts (prompts locaux)
-  - group_prompt_suggestions (suggestions locales)
+  - prompts (catalogue unifié)
+  - prompt_suggestions (locales→groupe ou locales→global)
   - group_ownership_transfers (transferts)
   - user_group_prefs (préférences utilisateurs)
   - notifications (notifications liées au groupe)
@@ -626,7 +666,7 @@ Et seuls les owners/admins du groupe ont accès à cette interface
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
 Quand je crée un nouveau prompt local depuis "Gestion des prompts locaux"
-Alors il est ajouté à group_prompts avec cloned_from_global=NULL
+Alors un prompt est créé dans `prompts` avec `scope='group'` et `owner_group_id=G`
 Et il est immédiatement actif (is_active=true) pour mon groupe
 Et je peux définir type, titre, corps, tags, métadonnées
 Et il n'apparaît que dans mon groupe (pas de modération globale)
@@ -653,7 +693,7 @@ Et il devient disponible pour la sélection automatique quotidienne
 ```gherkin
 Étant donné que je suis membre d'un groupe
 Quand je soumets une suggestion de prompt local
-Alors elle est créée avec status='pending' dans group_prompt_suggestions
+Alors elle est créée avec status='pending' dans `prompt_suggestions` avec `target_scope='group'` et `target_group_id=G`
 Et les owners/admins du groupe reçoivent une notification
 Et je peux voir le statut de ma suggestion dans mes propositions
 ```
@@ -677,7 +717,7 @@ Et je peux voir le statut de ma suggestion dans mes propositions
 ```gherkin
 Étant donné un prompt local réussi dans mon groupe
 Quand je clique "Suggérer pour la banque globale"
-Alors une entrée est créée dans global_prompt_suggestions avec status='pending'
+Alors une entrée est créée dans `prompt_suggestions` avec `target_scope='global'` et `target_group_id=NULL`, status='pending'
 Et le créateur de l'app reçoit une notification
 Et je peux ajouter un commentaire expliquant pourquoi ce prompt est intéressant
 Et je peux voir le statut de ma suggestion
@@ -748,12 +788,12 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 ```gherkin
 Quand il est temps de créer la manche pour le jour J (à J-1)
 Alors créer automatiquement daily_rounds avec status='scheduled' et scheduled_for_local_date=J
-Et sélectionner aléatoirement un prompt local actif (group_prompts.is_active=true)
+Et sélectionner aléatoirement un prompt local approuvé (`prompts.scope='group'` et `owner_group_id=G`)
 Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répétition)
 Et programmer l'ouverture selon drop_time du groupe (heure française)
 Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
 Et si aucun prompt local actif n'est disponible, ignorer progressivement la fenêtre anti‑répétition (jusqu'à 0) pour garantir une sélection
-Et s'il n'existe toujours aucun prompt local actif, créer le round avec group_prompt_id=NULL et ne pas envoyer de notification tant qu'aucun prompt n'est activé
+Et s'il n'existe toujours aucun prompt éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
 ```
 
 #### Règles métier
@@ -762,7 +802,7 @@ Et s'il n'existe toujours aucun prompt local actif, créer le round avec group_p
 - **Invariant simple** : Création d'un round pour le jour J à J-1, à l'heure drop_time
 - **Une seule manche par jour local** par groupe : UNIQUE(group_id, scheduled_for_local_date)
 - **Sélection intelligente** des prompts avec rotation (N=7 derniers exclus, paramétrable)
-- **Fallback défini** : si aucun prompt local actif, la fenêtre anti‑répétition est réduite; si 0 prompt actif, le round est créé sans prompt (group_prompt_id=NULL) et l'ouverture est différée jusqu'à activation d'un prompt
+- **Fallback défini** : si aucun prompt éligible, la fenêtre anti‑répétition est réduite; si 0 prompt, le round est créé sans snapshot et l'ouverture est différée jusqu'à création du snapshot
 
 ---
 
@@ -775,10 +815,10 @@ Et s'il n'existe toujours aucun prompt local actif, créer le round avec group_p
 #### Critères d'acceptation
 
 ```gherkin
-Quand now() >= open_at & status='scheduled' & group_prompt_id IS NOT NULL
+Quand now() >= open_at & status='scheduled'
 Alors status='open' et notif "round_open" (si autorisée)
 
-Quand now() >= open_at & status='scheduled' & group_prompt_id IS NULL
+Quand now() >= open_at & status='scheduled' & snapshot absent
 Alors l'ouverture est différée et aucune notification n'est émise tant qu'aucun prompt n'est activé pour ce round
 ```
 
