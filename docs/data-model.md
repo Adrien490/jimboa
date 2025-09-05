@@ -28,10 +28,7 @@ erDiagram
     %% Sélection, anti-répétition, snapshot
     %% v1: snapshot inline dans daily_rounds (pas de table dédiée)
 
-    %% Suggestions
-    profiles ||--o{ prompt_suggestions : "suggère"
-    groups ||--o{ prompt_suggestions : "vers groupe (scope='group')"
-    prompts ||--o{ prompt_suggestions : "promotion/itération (facultatif)"
+    %% Suggestions unifiées: prompts avec status='pending' (scope='group' ou 'global')
 
     %% Notifications & préférences
     profiles ||--o{ user_devices : "appareils"
@@ -310,7 +307,6 @@ USING (
   - `group_settings.group_id` → suppression des paramètres
   - `daily_rounds.group_id` → suppression des manches
   - `prompts.owner_group_id` → suppression des prompts locaux
-  - `prompt_suggestions.target_group_id` → suppression des suggestions locales
   - `group_ownership_transfers.group_id` → suppression des transferts
   - `user_group_prefs.group_id` → suppression des préférences
   - `notifications.group_id` → suppression des notifications

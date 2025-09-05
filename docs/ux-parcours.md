@@ -232,7 +232,7 @@ app/
             edit/
               page.tsx
               actions.ts          # SA: updateLocalPrompt / toggleActive
-          suggestions/            # Modération des suggestions locales (pending)
+          prompts/                # Modération des prompts locaux (filtre status=pending)
             page.tsx
             actions.ts            # SA: approve/reject (crée group_prompt)
 
@@ -263,9 +263,9 @@ app/
           edit/
             page.tsx
             actions.ts            # SA: approve/reject/archive/edit global prompt
-      suggestions/
-        page.tsx                  # Suggestions locales → global (pending)
-        actions.ts                # SA: resolveGlobalSuggestion
+      prompts/
+        page.tsx                  # Banque globale (filtre status: pending/approved/rejected/archived)
+        actions.ts                # SA: approve/reject/archive/edit global prompt
 
   (api)/                          # Regroupe les handlers techniques (non indexés)
     api/

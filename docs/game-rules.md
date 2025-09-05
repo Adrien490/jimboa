@@ -39,9 +39,10 @@ graph LR
 
 - **Banque globale curatée** : Catalogue géré par le créateur (qualité/édition)
 - **Prompts locaux** : Owners/admins créent des prompts spécifiques à leur groupe
-- **Suggestions** :
-  - Membres → banque **locale** (modération owner/admin)
-  - Prompts locaux → banque **globale** (modération app creator)
+- **Suggestions (unifiées)** :
+  - Les suggestions sont des "prompts" créés avec `status='pending'`.
+  - Locale: `scope='group'` avec `owner_group_id=G` (modération owner/admin).
+  - Globale: `scope='global'` (modération app creator).
 - **Types** : `question`, `vote`, `challenge`
   - **Sélection quotidienne** :
     - Par défaut: candidats = prompts locaux approuvés (`scope='group'` et `owner_group_id=G`).

@@ -493,8 +493,7 @@ Et toutes les données liées sont automatiquement supprimées :
   - group_members (membres)
   - group_settings (paramètres)
   - daily_rounds (manches) → et leurs FK (submissions, comments, votes)
-  - prompts (catalogue unifié)
-  - prompt_suggestions (locales→groupe ou locales→global)
+  - prompts (catalogue unifié: locaux/global, y compris status='pending')
   - group_ownership_transfers (transferts)
   - user_group_prefs (préférences utilisateurs)
   - notifications (notifications liées au groupe)
@@ -579,7 +578,7 @@ Alors aucune notif "round_open" n'est émise à l'échelle du groupe (les notifs
 Étant donné que je suis le créateur de l'app (email = `APP_CREATOR_EMAIL`)
 Quand je me connecte avec mon compte autorisé
 Alors j'accède à l'interface d'administration
-Et j'ai accès aux sections : banque globale, suggestions, modération
+Et j'ai accès aux sections : banque globale (pending/approved/rejected/archived), modération
 Et aucun autre utilisateur ne peut accéder à cette interface
 ```
 
@@ -666,8 +665,8 @@ Et seuls les owners/admins du groupe ont accès à cette interface
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
 Quand je crée un nouveau prompt local depuis "Gestion des prompts locaux"
-Alors un prompt est créé dans `prompts` avec `scope='group'` et `owner_group_id=G`
-Et il est immédiatement actif (is_active=true) pour mon groupe
+Alors un prompt est créé dans `prompts` avec `scope='group'`, `owner_group_id=G`, `status='approved'`
+Et il est immédiatement disponible pour mon groupe
 Et je peux définir type, titre, corps, tags, métadonnées
 Et il n'apparaît que dans mon groupe (pas de modération globale)
 Et il devient disponible pour la sélection automatique quotidienne
@@ -693,7 +692,7 @@ Et il devient disponible pour la sélection automatique quotidienne
 ```gherkin
 Étant donné que je suis membre d'un groupe
 Quand je soumets une suggestion de prompt local
-Alors elle est créée avec status='pending' dans `prompt_suggestions` avec `target_scope='group'` et `target_group_id=G`
+Alors un prompt est créé dans `prompts` avec `scope='group'`, `owner_group_id=G`, `status='pending'`
 Et les owners/admins du groupe reçoivent une notification
 Et je peux voir le statut de ma suggestion dans mes propositions
 ```
@@ -717,7 +716,7 @@ Et je peux voir le statut de ma suggestion dans mes propositions
 ```gherkin
 Étant donné un prompt local réussi dans mon groupe
 Quand je clique "Suggérer pour la banque globale"
-Alors une entrée est créée dans `prompt_suggestions` avec `target_scope='global'` et `target_group_id=NULL`, status='pending'
+Alors un prompt est créé dans `prompts` avec `scope='global'`, `status='pending'`
 Et le créateur de l'app reçoit une notification
 Et je peux ajouter un commentaire expliquant pourquoi ce prompt est intéressant
 Et je peux voir le statut de ma suggestion
@@ -740,10 +739,10 @@ Et je peux voir le statut de ma suggestion
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné des suggestions de prompts locaux avec status='pending'
+Étant donné des prompts locaux avec `status='pending'`
 Quand j'accède à l'interface de modération du groupe
 Alors je vois toutes les suggestions en attente pour mon groupe
-Et je peux approuver (crée un group_prompt), rejeter avec feedback
+Et je peux approuver (le prompt passe `status='approved'`), rejeter avec feedback
 Et le suggéreur reçoit une notification du résultat
 Et si approuvé, le prompt devient disponible dans ma banque locale
 ```
@@ -765,10 +764,10 @@ Et si approuvé, le prompt devient disponible dans ma banque locale
 #### Critères d'acceptation
 
 ```gherkin
-Étant donné une suggestion de prompt avec status='pending'
+Étant donné un prompt global avec `status='pending'`
 Quand je l'examine dans l'interface d'admin
 Alors je vois le prompt original et le commentaire du suggéreur
-Et je peux approuver (crée un global_prompt), rejeter avec feedback, ou demander modifications
+Et je peux approuver (le prompt passe `status='approved'`), rejeter avec feedback, ou demander modifications
 Et le suggéreur reçoit une notification du résultat
 Et si approuvé, le prompt devient disponible dans la banque globale
 ```
