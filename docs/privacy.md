@@ -7,7 +7,7 @@ Jimboa respecte votre vie privée. Cette page décrit quelles données nous coll
 ## Données collectées
 - Compte: email Google (via Supabase Auth), identifiant utilisateur
 - Profil: display_name, image_url (Google ou Storage)
-- Utilisation: appartenance aux groupes, participations (soumissions, commentaires, votes)
+- Utilisation: appartenance aux groupes, participations (soumissions, commentaires, votes) et enregistrement de participation par manche (`round_participations`)
 - Appareils: tokens push (iOS/Android/Web)
 
 ## Finalités
@@ -46,4 +46,3 @@ Pour toute demande: contact à `support@jimboa.app` (adresse indicative v1).
 
 ## Modifications
 Nous pouvons mettre à jour cette politique. Les changements substantiels seront annoncés dans l’application.
-

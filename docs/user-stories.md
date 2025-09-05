@@ -942,10 +942,10 @@ Alors je vois toutes les interactions du round (vote = participation)
 
 #### Règles métier
 
-- **RLS activé** sur `submissions`, `comments`, `round_votes`
-- **Condition de visibilité unifiée** : `round.status='closed'` OU `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = round_id AND rp.user_id = auth.uid())`
-- **Participation définie comme** : `EXISTS(ma_soumission)` OU `EXISTS(mon_vote)`
-- **Performances** : Index sur `(round_id, author_id)` et `(round_id, voter_id)` pour les requêtes RLS
+- **RLS activé** sur `submissions`, `comments`, `round_votes` (lecture conditionnée par participation) et `round_participations` (lecture membres uniquement).
+- **Condition de visibilité unifiée** : `round.status='closed'` OU `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = round_id AND rp.user_id = auth.uid())`.
+- **Participation définie comme** : soumission OU vote, modélisée par une ligne dans `round_participations` (insérée via triggers idempotents).
+- **Performances** : Index sur `(round_id, author_id)` et `(round_id, voter_id)` pour les requêtes RLS, et PK/Index sur `round_participations (round_id, user_id)` + `(round_id)` pour la vérification rapide de participation.
 - **Cohérence** : Même logique RLS pour toutes les tables d'interactions
 
 #### Cas limites

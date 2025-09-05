@@ -18,7 +18,7 @@
 ## Flux critiques
 
 - Cycle quotidien: J‑1 création → ouverture (push) → fermeture → consultation
-- Participation: soumission (1/user/round) ou vote → déblocage RLS
+- Participation: soumission (1/user/round) ou vote → déblocage RLS via `round_participations` (UPSERT triggers)
 - Modération: soft delete par owner/admin, jamais de suppression physique
 
 ## Décisions clés (extrait)

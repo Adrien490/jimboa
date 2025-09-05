@@ -11,9 +11,11 @@ erDiagram
     profiles ||--o{ submissions : "auteur"
     profiles ||--o{ comments : "commentaire"
     profiles ||--o{ round_votes : "voteur"
+    profiles ||--o{ round_participations : "participant"
     daily_rounds ||--o{ submissions : "soumissions"
     daily_rounds ||--o{ round_votes : "votes"
     daily_rounds ||--o{ comments : "discussion globale"
+    daily_rounds ||--o{ round_participations : "participations"
     submissions ||--o{ submission_media : "médias"
 
     %% Catalogue unifié
@@ -282,8 +284,8 @@ Détails: `docs/db-indexes-triggers.md`.
   - `prompts.is_enabled` (bool par défaut true) pour activer/désactiver un prompt.
   - `prompts.audience_tag_id` (FK → `prompt_tags.id`) pour la facette Audience.
   - `group_prompt_blocks(group_id, prompt_id)` avec contrainte d’unicité pour la blocklist V1.
-  - Visibilité après participation basée sur `round_participations` (UNIQUE `(round_id, user_id)`) + index dédiés sur `submissions`/`round_votes`.
-  - Optionnel: vue matérialisée `round_participations` (UNIQUE (round_id, user_id)) rafraîchie planifié.
+  - Visibilité après participation basée sur la table `round_participations` (PK `(round_id, user_id)`), alimentée par triggers (soumission/vote) et soumise à RLS (lecture membres du groupe du round).
+  - Index support: `round_participations (round_id, user_id)` UNIQUE + index `(round_id)`; voir `docs/db-indexes-triggers.md`.
 -
 Voir les fichiers de migration pour les détails d’implémentation.
 

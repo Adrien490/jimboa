@@ -24,6 +24,7 @@ ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE submission_media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE round_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE round_participations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_devices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_group_prefs ENABLE ROW LEVEL SECURITY;
@@ -32,7 +33,7 @@ ALTER TABLE group_ownership_transfers ENABLE ROW LEVEL SECURITY;
 
 ## Helpers RLS
 
-### Fonction membre (factorisée)
+### Fonctions membre (factorisées)
 
 ```sql
 CREATE OR REPLACE FUNCTION is_member(gid uuid)
@@ -50,14 +51,27 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION is_member(uuid) TO authenticated;
+
+-- Variante: membership à partir d'un round
+CREATE OR REPLACE FUNCTION is_member_of_round(rid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT is_member(dr.group_id)
+  FROM daily_rounds dr
+  WHERE dr.id = rid
+$$;
+
+GRANT EXECUTE ON FUNCTION is_member_of_round(uuid) TO authenticated;
 ```
 
 ## Politique type (ex: comments)
 
 ```sql
 USING (
-  /* Membre actuel du groupe du round (factorisé) */
-  is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))
+  /* Membre actuel du groupe du round (helper dédié) */
+  is_member_of_round(comments.round_id)
   AND (
     /* Archives accessibles aux membres actuels */
     (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
@@ -90,7 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_daily_rounds_group_source_open_at ON daily_rounds
 - SECURITY DEFINER + search_path contrôlé
 - GRANT EXECUTE sur les fonctions RLS aux rôles d'application
 
-Voir aussi: `docs/data-model.md#-row-level-security-rls---visibilité-conditionnelle`.
+Voir aussi: `docs/data-model.md#-row-level-security-rls`.
 
 ## round_participations — Pourquoi c’est utile (v1)
 <a id="round-participations"></a>
@@ -152,7 +166,7 @@ Policies RLS (exemple comments):
 
 ```sql
 USING (
-  is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))
+  is_member_of_round(comments.round_id)
   AND (
     (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
     OR EXISTS (
@@ -313,7 +327,7 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 
 ### submissions
 
-- SELECT: membre `active` du groupe du round via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = submissions.round_id))` ET (round `closed` OU `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = submissions.round_id AND rp.user_id = auth.uid())`).
+- SELECT: membre `active` du groupe du round via `is_member_of_round(submissions.round_id)` ET (round `closed` OU `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = submissions.round_id AND rp.user_id = auth.uid())`).
 - INSERT: membre actif du groupe (contrôle membership + statut round `open`). Unicité `(round_id, author_id)`.
 - UPDATE: auteur non autorisé (soumission définitive); owner/admin: soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
@@ -326,14 +340,14 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 
 ### comments
 
-- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))` + fermé OU participation via `round_participations`).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member_of_round(comments.round_id)` + fermé OU participation via `round_participations`).
 - INSERT: membre actif du groupe ET round non fermé.
 - UPDATE: auteur avant fermeture; après fermeture: owner/admin uniquement pour soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### round_votes
 
-- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = round_votes.round_id))` + fermé OU participation via `round_participations`).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member_of_round(round_votes.round_id)` + fermé OU participation via `round_participations`).
 - INSERT: membre actif du groupe, round type vote, contrainte UNIQUE `(round_id, voter_id)`.
 - UPDATE/DELETE: interdits (votes définitifs; triggers bloquent toute modification/suppression).
 
@@ -359,8 +373,20 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 
 ### round_participations
 
-- SELECT: membres du groupe du round uniquement (via jointure `daily_rounds` → `group_id` et `is_member(...)`).
+- SELECT: membres du groupe du round uniquement, via `is_member_of_round(round_id)`.
 - INSERT/UPDATE/DELETE: aucun pour `authenticated` (INSERT réalisés par triggers/worker en service role uniquement).
+
+Exemple de politiques minimales:
+
+```sql
+-- Lecture réservée aux membres du groupe du round
+CREATE POLICY rp_select_members
+ON round_participations FOR SELECT
+USING (is_member_of_round(round_id));
+
+-- Pas d'écriture côté clients authentifiés
+-- (ne publier AUCUNE policy FOR INSERT/UPDATE/DELETE pour authenticated)
+```
 
 ## Triggers & Intégrité (résumé)
 
