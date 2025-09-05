@@ -71,7 +71,7 @@ erDiagram
 
 | Table                    | Champs principaux                                                                                                                                                                                                                              | Contraintes & remarques                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `is_enabled` (bool, défaut `true`), `audience_tag_id` (NULL, FK→`prompt_tags.id`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. `is_enabled` sert au on/off (surtout pour les locaux) sans confondre avec l’archivage; les prompts globaux restent principalement gouvernés par le statut. |
+| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `is_enabled` (bool, défaut `true`), `audience_tag_id` (NULL, FK→`prompt_tags.id`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `suggested_from_group_id` (UUID, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. `is_enabled` sert au on/off (surtout pour les locaux) sans confondre avec l’archivage; les prompts globaux restent principalement gouvernés par le statut. Traçabilité des suggestions: `suggested_from_group_id` conservé même si le groupe est supprimé. |
 | **group_prompt_blocks**  | `group_id`, `prompt_id`, `created_at`                                                                                                                            | V1: blocklist simple. `UNIQUE(group_id, prompt_id)` ; exclusion ponctuelle de la sélection ; pas de policy tri‑state. |
 | **daily_rounds**         | `group_id`, `scheduled_for_local_date` (DATE FR), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `source_prompt_id` (UUID, NULL), `resolved_type`, `resolved_title`, `resolved_body`, `resolved_metadata` (jsonb), `resolved_tags` (jsonb), `created_at`, `updated_at` | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at`. Snapshot inline (immuable) dans `daily_rounds`; `source_prompt_id` sert aussi à l’anti‑répétition. |
 | **submissions**          | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                                                        | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`.                                                                        |
@@ -88,7 +88,7 @@ erDiagram
 
 | Table                         | Champs principaux                                                        | Contraintes & remarques                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **notifications**             | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`… ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`)            |
+| **notifications**             | `user_id`, `group_id`, `type`, `payload` (jsonb), `status`, `created_at` | Types: `round_open`, `prompt_suggested_local`, `prompt_suggested_global`, `suggestion_reviewed`, `ownership_transfer_requested`, `ownership_transfer_accepted`, `ownership_transfer_rejected` ; file d'envoi ; `status` (`pending`\|`sent`\|`failed`)            |
 | **user_devices**              | `user_id`, `platform` (`ios`\|`android`\|`web`), `token`, `endpoint` (web), `p256dh` (web), `auth` (web), `created_at`   | **UNIQUE(token)** ; Web Push: stocker aussi `endpoint`/`p256dh`/`auth` (VAPID)                      |
 | **user_group_prefs**          | `user_id`, `group_id`, `mute` (bool), `push` (bool)                      | `UNIQUE(user_id, group_id)` ; préférences par groupe                                    |
 | **group_ownership_transfers** | `group_id`, `from_user_id`, `to_user_id`, `status`, `created_at`         | Transferts de propriété avec acceptation ; `status` (`pending`\|`accepted`\|`rejected`) |
@@ -136,6 +136,18 @@ Note: le tag Audience est informatif pour v1; aucune préférence d’audience a
 - **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
 - **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) avec `status='approved'` ET `is_enabled=true` + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés; exclure les prompts présents dans `group_prompt_blocks`; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`.
+
+### Types & CHECKs (à faire v1)
+
+- `prompts.type` : ENUM (`question`,`vote`,`challenge`) ou CHECK.
+- `prompts.status` : ENUM (`pending`,`approved`,`rejected`,`archived`) ou CHECK.
+- `daily_rounds.status` : ENUM (`scheduled`,`open`,`closed`).
+- `group_members.role` : ENUM (`owner`,`admin`,`member`).
+- `group_members.status` : ENUM (`active`,`left`,`banned`).
+- `notifications.type` : ENUM/CHECK couvrant `round_open`, `prompt_suggested_local`, `prompt_suggested_global`, `suggestion_reviewed`, `ownership_transfer_requested|accepted|rejected`.
+- `notifications.status` : ENUM (`pending`,`sent`,`failed`).
+- `comments` soft delete couplé: CHECK garantissant `(deleted_by_admin IS NULL) = (deleted_at IS NULL)`.
+- `groups.join_code` : CHECK longueur=6 ET format `[A-Z0-9]{6}` (si non `citext`).
 
 ## 🕐 Gestion des temps, fuseaux et DST
 

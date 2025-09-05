@@ -222,6 +222,54 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - UPDATE: destinataire (accept/reject) via action serveur atomique.
 - DELETE: serveur (expiration/annulation) ou owner si pending.
 
+## Policies Owner/Admin (snippets)
+
+```sql
+-- 1) Seul OWNER peut promouvoir/déclasser un admin
+CREATE POLICY gm_update_roles_owner_only ON group_members
+FOR UPDATE TO authenticated
+USING (is_member(group_id))
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM group_members gmo
+    WHERE gmo.group_id = group_members.group_id
+      AND gmo.user_id = auth.uid()
+      AND gmo.role = 'owner'
+      AND gmo.status = 'active'
+  )
+);
+
+-- 2) Réglages de groupe: OWNER (ou OWNER+ADMIN selon produit)
+CREATE POLICY group_settings_update_owner_only ON group_settings
+FOR UPDATE TO authenticated
+USING (is_member(group_id))
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM group_members gmo
+    WHERE gmo.group_id = group_settings.group_id
+      AND gmo.user_id = auth.uid()
+      AND gmo.role = 'owner'
+      AND gmo.status = 'active'
+  )
+);
+
+-- 3) Transfert de propriété: OWNER initie, destinataire accepte via action serveur
+-- (Conseillé: effectuer le transfert en service role pour atomicité)
+
+-- 4) Lecture join_code: vue sécurisée renvoyant join_code seulement à owner/admin
+CREATE OR REPLACE VIEW groups_secure AS
+SELECT g.id, g.name, g.image_path, g.is_active,
+       CASE WHEN EXISTS (
+         SELECT 1 FROM group_members gm
+         WHERE gm.group_id = g.id AND gm.user_id = auth.uid()
+           AND gm.status='active' AND gm.role IN ('owner','admin')
+       ) THEN g.join_code ELSE NULL END AS join_code,
+       g.owner_id, g.created_at, g.updated_at
+FROM groups g;
+
+GRANT SELECT ON groups_secure TO authenticated;
+```
+
 ## Triggers & Intégrité (résumé)
 
 - groups: normalisation `join_code` en UPPER + validation format.

@@ -25,6 +25,26 @@ Ce document détaille toutes les user stories organisées par épiques pour l'ap
 
 ---
 
+## À faire avant de coder (synthèse exécutable)
+
+- RLS Owner/Admin:
+  - Policies explicites: seul `owner` peut promouvoir/déclasser `admin`, transférer la propriété, modifier `group_settings`.
+  - Lecture `groups.join_code` restreinte à `owner`/`admin` du groupe.
+- Types & CHECKs:
+  - ENUM/CHECK: `prompts.type`, `prompts.status`, `rounds.status`, `group_members.role/status`, `notifications.status/type`.
+- `comments`: contrainte de couplage `(deleted_by_admin IS NULL) = (deleted_at IS NULL)` (jamais l'un sans l'autre).
+  - `groups.join_code`: CHECK longueur=6, UPPER, charset `[A-Z0-9]` (ou colonne `citext` + UNIQUE pour unicité case-insensitive).
+- Notifications — nouveaux types:
+  - Étendre `notifications.type`: `prompt_suggested_local`, `prompt_suggested_global`, `suggestion_reviewed`, `ownership_transfer_requested|accepted|rejected`.
+- Traçabilité suggestions globales:
+  - Ajouter `prompts.suggested_from_group_id` (NULL) ou `prompts.metadata.suggested_from_group_id`.
+- Soft delete médias (obligatoire):
+  - Trigger `submission_media_soft_delete_cascade` requis (marquer médias liés supprimés lors du soft delete d’une submission).
+
+Réf. détaillées: `docs/data-model.md` (types & contraintes), `docs/rls-policies.md` (policies), `docs/db-indexes-triggers.md` (triggers & indexes).
+
+---
+
 ## EPIC A — Authentification & Profil (Google OAuth)
 
 ### A1 — Créer automatiquement un profil à la première connexion Google OAuth
