@@ -39,12 +39,18 @@
 
 ### Statuts des prompts
 
-| Statut     | Description              | Contexte       |
-| ---------- | ------------------------ | -------------- |
-| `pending`  | En attente de modération | Banque globale |
-| `approved` | Validé et utilisable     | Banque globale |
-| `rejected` | Refusé avec feedback     | Banque globale |
-| `archived` | Retiré de la circulation | Banque globale |
+| Statut     | Description                          | Contexte                 |
+| ---------- | ------------------------------------ | ------------------------ |
+| `pending`  | En attente de modération             | Global (et suggestions)  |
+| `approved` | Validé et sélectionnable (si activé) | Global et local          |
+| `rejected` | Refusé avec feedback                 | Global (modération)      |
+| `archived` | Retiré du catalogue (long terme)     | Global et local          |
+
+### Activation des prompts (`is_enabled`)
+
+- Champ booléen qui permet d'activer/désactiver un prompt sans changer son statut.
+- Utilisation principale: prompts locaux (gestion owner/admin).
+- Sélection locale = `status='approved'` ET `is_enabled=true`.
 
 ### Statuts des membres
 

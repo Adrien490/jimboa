@@ -191,12 +191,12 @@ Et si une image est fournie, elle est stockée dans image_path
 Étant donné un groupe G
 Quand je choisis une audience dans les réglages
 Alors `group_settings.group_audience_tag_id` est défini avec un tag de catégorie `audience`
-Et à la sélection quotidienne v1.1, les prompts locaux actifs taggés avec cette audience sont priorisés/filtrés
-Et s'il n'y en a aucun, la sélection retombe sur l'ensemble des prompts locaux actifs (fallback)
+Et à la sélection quotidienne v1.1, les prompts locaux approuvés et activés (`is_enabled=true`) taggés avec cette audience sont priorisés/filtrés
+Et s'il n'y en a aucun, la sélection retombe sur l'ensemble des prompts locaux approuvés et activés (fallback)
 
 Étant donné un groupe G avec une audience définie
 Quand je supprime la préférence
-Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts locaux actifs redeviennent éligibles
+Alors `group_settings.group_audience_tag_id` passe à NULL et tous les prompts locaux approuvés et activés redeviennent éligibles
 ```
 
 ### C4 — Autoriser la banque globale pour la sélection
@@ -493,7 +493,8 @@ Et toutes les données liées sont automatiquement supprimées :
   - group_members (membres)
   - group_settings (paramètres)
   - daily_rounds (manches) → et leurs FK (submissions, comments, votes)
-  - prompts (catalogue unifié: locaux/global, y compris status='pending')
+  - prompts locaux appartenant au groupe uniquement (`scope='group'`, `owner_group_id=G`, y compris `status='pending'`)
+  - Les prompts globaux sont conservés (`scope='global'`, `owner_group_id=NULL`)
   - group_ownership_transfers (transferts)
   - user_group_prefs (préférences utilisateurs)
   - notifications (notifications liées au groupe)
@@ -507,6 +508,7 @@ Et les fichiers Storage sont supprimés en arrière-plan (images, médias)
 - **ON DELETE CASCADE** : Toutes les FK vers `groups.id` configurées avec CASCADE
 - **Suppression transitive** : Les manches supprimées entraînent la suppression de leurs soumissions, commentaires, votes, etc.
 - **Storage asynchrone** : Suppression des fichiers en arrière-plan pour éviter les timeouts
+- **Prompts** : Seuls les prompts locaux du groupe (`scope='group'` et `owner_group_id=G`) sont supprimés; les prompts globaux (`scope='global'`, `owner_group_id=NULL`) sont conservés
 
 #### Cas limites
 
@@ -638,9 +640,9 @@ Et je peux prévisualiser chaque prompt avant publication
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
 Quand j'accède à "Gestion des prompts locaux"
-Alors je vois tous les prompts locaux de mon groupe (actifs et inactifs)
+Alors je vois tous les prompts locaux de mon groupe (activés et désactivés)
 Et je peux filtrer par type, statut, date de création
-Et je peux activer/désactiver chaque prompt pour la sélection automatique
+Et je peux activer/désactiver chaque prompt pour la sélection automatique (champ `is_enabled`)
 Et je peux éditer, dupliquer ou supprimer les prompts locaux
 Et seuls les owners/admins du groupe ont accès à cette interface
 ```
@@ -649,7 +651,8 @@ Et seuls les owners/admins du groupe ont accès à cette interface
 
 - Interface dédiée aux owners/admins du groupe uniquement
 - Vue complète des prompts locaux du groupe
-- Actions : créer, éditer, activer/désactiver, supprimer
+- Actions : créer, éditer, activer/désactiver (`is_enabled`), supprimer
+- Désactivation ≠ Archivage : `is_enabled=false` retire de la sélection sans changer `status`; `status='archived'` sort du catalogue (long terme)
 - Aucun accès à la banque globale depuis cette interface
 
 ---
@@ -665,7 +668,7 @@ Et seuls les owners/admins du groupe ont accès à cette interface
 ```gherkin
 Étant donné que je suis owner/admin d'un groupe
 Quand je crée un nouveau prompt local depuis "Gestion des prompts locaux"
-Alors un prompt est créé dans `prompts` avec `scope='group'`, `owner_group_id=G`, `status='approved'`
+Alors un prompt est créé dans `prompts` avec `scope='group'`, `owner_group_id=G`, `status='approved'`, `is_enabled=true`
 Et il est immédiatement disponible pour mon groupe
 Et je peux définir type, titre, corps, tags, métadonnées
 Et il n'apparaît que dans mon groupe (pas de modération globale)
@@ -742,7 +745,7 @@ Et je peux voir le statut de ma suggestion
 Étant donné des prompts locaux avec `status='pending'`
 Quand j'accède à l'interface de modération du groupe
 Alors je vois toutes les suggestions en attente pour mon groupe
-Et je peux approuver (le prompt passe `status='approved'`), rejeter avec feedback
+Et je peux approuver (le prompt passe `status='approved'`), rejeter avec feedback, ou l’approuver et le laisser désactivé (`is_enabled=false`) si besoin
 Et le suggéreur reçoit une notification du résultat
 Et si approuvé, le prompt devient disponible dans ma banque locale
 ```
@@ -787,11 +790,11 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 ```gherkin
 Quand il est temps de créer la manche pour le jour J (à J-1)
 Alors créer automatiquement daily_rounds avec status='scheduled' et scheduled_for_local_date=J
-Et sélectionner aléatoirement un prompt local approuvé (`prompts.scope='group'` et `owner_group_id=G`)
+Et sélectionner aléatoirement un prompt local approuvé et activé (`prompts.scope='group'`, `owner_group_id=G`, `status='approved'`, `is_enabled=true`)
 Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répétition)
 Et programmer l'ouverture selon drop_time du groupe (heure française)
 Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
-Et si aucun prompt local actif n'est disponible, ignorer progressivement la fenêtre anti‑répétition (jusqu'à 0) pour garantir une sélection
+Et si aucun prompt local approuvé et activé n'est disponible, ignorer progressivement la fenêtre anti‑répétition (jusqu'à 0) pour garantir une sélection
 Et s'il n'existe toujours aucun prompt éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
 ```
 

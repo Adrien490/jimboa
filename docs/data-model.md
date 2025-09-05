@@ -70,7 +70,7 @@ erDiagram
 
 | Table                    | Champs principaux                                                                                                                                                                                                                              | Contraintes & remarques                                                                                                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. Les prompts globaux sont modérés et partagés; pas d’édition locale du texte pour les globaux.                           |
+| **prompts**              | `id` (PK), `scope` (`global`\|`group`), `owner_group_id` (NULL si global), `type` (`question`\|`vote`\|`challenge`), `title`, `body`, `metadata` (jsonb), `status` (`pending`\|`approved`\|`rejected`\|`archived`), `is_enabled` (bool, défaut `true`), `min_group_size` (int, NULL), `max_group_size` (int, NULL), `created_by`, `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` | Catalogue unique. Si `scope='group'` ⇒ `owner_group_id` NOT NULL. `is_enabled` sert au on/off (surtout pour les locaux) sans confondre avec l’archivage; les prompts globaux restent principalement gouvernés par le statut. |
 | **group_prompt_policies**| `group_id`, `prompt_id`, `policy` (`default`\|`allow`\|`block`), `created_at`                                                                                                                                                                | Politique tri‑state par groupe sur les prompts globaux. UNIQUE(`group_id`,`prompt_id`).                                                                                                    |
 | **daily_rounds**         | `group_id`, `scheduled_for_local_date` (DATE FR), `status` (`scheduled`\|`open`\|`closed`), `open_at` (timestamptz), `close_at` (timestamptz), `source_prompt_id` (UUID, NULL), `resolved_type`, `resolved_title`, `resolved_body`, `resolved_metadata` (jsonb), `resolved_tags` (jsonb), `created_at`, `updated_at` | `UNIQUE(group_id, scheduled_for_local_date)` ; **exactement 1 jour local** entre `open_at` et `close_at`. Snapshot inline (immuable) dans `daily_rounds`; `source_prompt_id` sert aussi à l’anti‑répétition. |
 | **submissions**          | `round_id`, `author_id`, `content_text`, `created_at`, `deleted_by_admin` (NULL), `deleted_at` (NULL)                                                                                                                                        | `UNIQUE(round_id, author_id)` ; définitives ; **soft delete admin** autorisé ; FK vers `daily_rounds` et `profiles`.                                                                        |
@@ -128,7 +128,7 @@ Préférence d'audience (niveau groupe)
 - **1 vote/user/round** : `UNIQUE(round_id, voter_id)`
 - **Owner unique** : index partiel `UNIQUE(group_id) WHERE role='owner'` dans `group_members`
 - **Réactions typées uniques** : `UNIQUE(entity_type, entity_id, user_id, type)`
-- **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) approuvés + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés filtrés par `global_catalog_mode`/`group_prompt_policies` ; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`
+- **Sélection quotidienne** : candidats = prompts `scope='group'` (owner_group_id=group_id) avec `status='approved'` ET `is_enabled=true` + (si `allow_global_prompts=true`) prompts `scope='global'` approuvés filtrés par `global_catalog_mode`/`group_prompt_policies`; anti‑répétition N=7 calculée à la volée via `daily_rounds.source_prompt_id`.
 
 ## 🕐 Gestion des temps, fuseaux et DST
 
@@ -312,3 +312,24 @@ USING (
   - `notifications.group_id` → suppression des notifications
 - **Suppression Storage asynchrone** : Images de groupe et médias associés supprimés en arrière-plan
 - **Suppression transitive** : Les FK des tables liées aux manches sont aussi supprimées (submissions, comments, votes, etc.)
+- **Prompts globaux conservés** : Les prompts `scope='global'` (avec `owner_group_id IS NULL`) ne sont pas affectés par la suppression d'un groupe.
+
+## 🔧 DDL — champs et index (extraits)
+
+```sql
+-- Ajout du champ d’activation simple
+ALTER TABLE prompts
+  ADD COLUMN IF NOT EXISTS is_enabled boolean NOT NULL DEFAULT true;
+
+-- Sélection efficace des locaux
+CREATE INDEX IF NOT EXISTS idx_prompts_local_selection
+  ON prompts(owner_group_id, status, is_enabled)
+  WHERE scope = 'group';
+```
+
+### Sémantique `status` vs `is_enabled`
+
+- **status** : cycle de vie et modération (pending/approved/rejected/archived)
+- **is_enabled** : interrupteur d’éligibilité à la sélection automatique (surtout pour les prompts locaux)
+- Sélection locale = `status='approved' AND is_enabled=true`
+- Archiver (`status='archived'`) sort le prompt du catalogue; désactiver (`is_enabled=false`) le garde visible mais non-sélectionnable

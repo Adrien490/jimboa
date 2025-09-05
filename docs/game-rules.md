@@ -32,6 +32,7 @@ graph LR
   - Taille maximale : 2MB
   - Redimensionnement automatique vers plusieurs tailles
   - Suppression en cascade lors de la suppression du groupe
+- **Suppression du groupe** : Cascade sur les entités liées; côté prompts, seuls les prompts locaux du groupe sont supprimés (`scope='group'`, `owner_group_id=G`), les prompts globaux sont conservés (`scope='global'`).
 - **Authentification** : Google OAuth uniquement
 - **Configuration** : Email du créateur défini via `APP_CREATOR_EMAIL` dans `.env`
 
@@ -45,15 +46,15 @@ graph LR
   - Globale: `scope='global'` (modération app creator).
 - **Types** : `question`, `vote`, `challenge`
   - **Sélection quotidienne** :
-    - Par défaut: candidats = prompts locaux approuvés (`scope='group'` et `owner_group_id=G`).
+    - Par défaut: candidats = prompts locaux approuvés ET activés (`scope='group'`, `owner_group_id=G`, `status='approved'` ET `is_enabled=true`).
     - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`), selon `global_catalog_mode`/policies.
     - Une fois le prompt choisi, écrire un **snapshot immuable inline** dans `daily_rounds` (champs `source_prompt_id`, `resolved_*`).
     - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
 
 Filtrage audience (optionnel v1.1)
 
-- Si `group_settings.group_audience_tag_id` est défini: sélectionner en priorité (ou filtrer) parmi les prompts locaux actifs taggés avec cette audience.
-- Fallback si aucun prompt ne matche: revenir à tous les prompts locaux actifs (pour garantir l'ouverture quotidienne).
+- Si `group_settings.group_audience_tag_id` est défini: sélectionner en priorité (ou filtrer) parmi les prompts locaux approuvés et activés taggés avec cette audience.
+- Fallback si aucun prompt ne matche: revenir à tous les prompts locaux approuvés et activés (pour garantir l'ouverture quotidienne).
 
 #### Classification (taxonomie à facettes)
 

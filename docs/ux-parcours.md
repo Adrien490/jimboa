@@ -115,7 +115,7 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
   - Source de sélection des prompts: **Locaux uniquement** ou **Locaux + Catalogue global** (snapshot à l'ouverture)
   - modifier nom/image (suppression Storage en arrière‑plan)
   - rôles (promouvoir/dépromouvoir)
-  - supprimer groupe (confirmation + conséquences)
+  - supprimer groupe (confirmation + conséquences : supprime uniquement les prompts locaux du groupe; conserve les prompts globaux)
 
 Note: l’entrée de groupe par défaut redirige vers la manche du jour; l’aperçu du groupe reste accessible via un onglet/route "overview" dédié.
 
@@ -231,7 +231,7 @@ app/
             page.tsx              # Détails
             edit/
               page.tsx
-              actions.ts          # SA: updateLocalPrompt / toggleActive
+              actions.ts          # SA: updateLocalPrompt / toggleEnabled (champ is_enabled)
           prompts/                # Modération des prompts locaux (filtre status=pending)
             page.tsx
             actions.ts            # SA: approve/reject (crée group_prompt)

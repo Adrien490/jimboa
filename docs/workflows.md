@@ -18,7 +18,7 @@
 
 ### Logique de sélection des prompts
 
-- **Source par défaut** : Prompts locaux approuvés (`scope='group'` et `owner_group_id=G`)
+- **Source par défaut** : Prompts locaux approuvés ET activés (`scope='group'`, `owner_group_id=G`, `status='approved'` ET `is_enabled=true`)
 - **Banque globale (option groupe)** : si `group_settings.allow_global_prompts=true`, inclure des `prompts` `scope='global'` approuvés comme candidats (selon `global_catalog_mode`/policies), sans clonage; créer ensuite le snapshot inline dans `daily_rounds` à l'ouverture (resolved_*)
 - **Anti-répétition** : Exclusion des 7 derniers prompts utilisés par le groupe
 - **Filtres** : Respecter `min_group_size`/`max_group_size` et la préférence d’audience si définie
