@@ -22,6 +22,12 @@ Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe
 - **Besoin** : Garder le lien au quotidien avec un rituel simple et amusant; entretenir la complicité et des conversations légères sans pression
 - **Contexte** : Vies chargées et routines quotidiennes; envie de proximité sans contrainte
 
+### 🧩 Classification
+
+- Approche tag‑driven avec une taxonomie à facettes pour des sélections pertinentes et combinables.
+- Facettes: Audience (ex: couple, friends…), Modality, Tone/Mood, Vulnerability, Topic, Safety/Age Gate, Language, Group Size Constraint.
+- “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe). Pas de facette “Seasonality / Event”.
+
 ### 🎪 Jobs-to-be-done
 
 > _"Je veux un micro-rituel social quotidien qui ne demande pas d'organisation."_

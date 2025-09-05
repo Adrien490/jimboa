@@ -83,10 +83,23 @@ erDiagram
 
 ### 🏷️ Tagging
 
-| Table                | Champs principaux                                  | Contraintes & remarques                                    |
-| -------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
-| **prompt_tags**      | `id`, `name`                                       | Tags libres (langue, thème, ton, difficulté…)              |
-| **prompt_tag_links** | `prompt_id`, `scope` (`global`\|`group`), `tag_id` | Lien polymorphe : (`scope`, `prompt_id`) + `tag_id` unique |
+| Table                | Champs principaux                                                                                                                       | Contraintes & remarques                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **prompt_tags**      | `id`, `name`, `category` (`audience`\|`modality`\|`tone`\|`vulnerability`\|`topic`\|`safety`\|`language`\|`group_size`) | Taxonomie à facettes; ex. **Audience**: `couple`, `friends`, `family`, `coworkers`, `roommates`                                          |
+| **prompt_tag_links** | `prompt_id`, `scope` (`global`\|`group`), `tag_id`                                                                                      | Lien polymorphe : (`scope`, `prompt_id`) + `tag_id` unique                                                                                |
+
+#### Taxonomie à facettes (recommandée)
+
+- **Audience**: couple, friends, family, coworkers, roommates…
+- **Modality**: question, vote, challenge, photo, audio, video
+- **Tone / Mood**: goofy, wholesome, deep, spicy, nostalgic
+- **Vulnerability / Intimité**: V1 → V5 (échelle simple)
+- **Topic**: travel, memories, food, work, hobbies… (liste semi‑ouverte)
+- **Safety / Age Gate**: PG, PG‑13, 16+
+- **Language**: fr, en
+- **Group Size Constraint**: bornes ou intervalles attendus (ex: ≥3)
+
+Note: “couple” et “friends” sont des valeurs de la facette **Audience**. Éviter de les mélanger avec des thèmes/tons/modalités. Ne pas inclure de facette “Seasonality / Event”.
 
 ## ⚖️ Contraintes métier (DB & applicatif)
 

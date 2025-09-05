@@ -111,6 +111,7 @@ Avant‑hier (Closed)  |  Groupe Alpha   | 📚 Archive
 - Réglages owner/admin:
   - drop_time (heure France)
   - notifications du groupe (on/off)
+  - facettes/tags favoris du groupe (Audience, Modality, Tone/Mood, Vulnerability, Topic, Safety/Age Gate, Language, Group Size Constraint)
   - modifier nom/image (suppression Storage en arrière‑plan)
   - rôles (promouvoir/dépromouvoir)
   - supprimer groupe (confirmation + conséquences)

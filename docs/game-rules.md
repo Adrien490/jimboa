@@ -45,6 +45,13 @@ graph LR
 - **Types** : `question`, `vote`, `challenge`
 - **Sélection quotidienne (v1)** : **Uniquement** parmi les prompts **locaux** actifs (`group_prompts.is_active=true`). La banque globale ne nourrit pas directement la sélection v1 ; elle sert de réservoir éditorial et de provenance de certains prompts locaux.
 
+#### Classification (taxonomie à facettes)
+
+- Utiliser une taxonomie à facettes pour classer les prompts et guider la sélection/filtre.
+- Facettes recommandées: Audience, Modality, Tone/Mood, Vulnerability, Topic, Safety/Age Gate, Language, Group Size Constraint.
+- “couple” et “friends” sont des valeurs de la facette Audience (pas un type de groupe).
+- Ne pas inclure de facette “Seasonality / Event”.
+
 > _Note : Un mode mixte (local + global approved) pourra être activé ultérieurement. Les garde‑fous et champs nécessaires sont déjà prévus._
 
 ### 💬 Interactions sociales

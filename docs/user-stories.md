@@ -179,6 +179,39 @@ Et si une image est fournie, elle est stockée dans image_path
 
 ---
 
+## EPIC T — Taxonomie à facettes (classification)
+
+### T1 — Définir les facettes et tags
+
+**En tant que** app creator  
+**Je veux** disposer de tags catégorisés par facette  
+**Afin de** classer les prompts proprement et guider la curation
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné des facettes prédéfinies
+Quand je crée un tag {name, category}
+Alors il appartient à l'une des facettes autorisées {audience, modality, tone, vulnerability, time, topic, safety, language, group_size}
+Et “couple” / “friends” sont créés dans la facette audience
+Et aucune facette “seasonality/event” n'est disponible
+```
+
+### T2 — Tagger un prompt local
+
+**En tant que** owner/admin de groupe  
+**Je veux** associer des tags (multi‑facettes) à un prompt local  
+**Afin de** faciliter la sélection et le filtrage ultérieurs
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un prompt local actif
+Quand j'ouvre l'édition des tags
+Alors je peux sélectionner plusieurs tags de différentes facettes (ex: audience=couple, tone=wholesome)
+Et la sauvegarde garantit l'unicité des liens prompt↔tag
+```
+
 ### C2 — Gérer le code d'invitation permanent
 
 **En tant qu'** owner/admin  
