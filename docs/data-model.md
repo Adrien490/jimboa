@@ -123,11 +123,11 @@ Note: “couple” et “friends” sont des valeurs de la facette **Audience**.
 
 Note: le tag Audience est informatif pour v1; aucune préférence d’audience au niveau groupe en v1.
 
-### (Optionnel) Participation — table d’appoint
+### Participation — table d’appoint (présente en v1)
 
 | Table                   | Champs principaux                      | Contraintes & remarques |
 | ----------------------- | -------------------------------------- | ------------------------ |
-| **round_participations**| `round_id`, `user_id`, `created_at`    | `UNIQUE(round_id, user_id)` ; alimentée par triggers sur `submissions`/`round_votes` (ou matérialisée) |
+| **round_participations**| `round_id`, `user_id`, `created_at`    | `UNIQUE(round_id, user_id)` ; alimentée par triggers sur `submissions`/`round_votes` (idempotent). Voir détails et raisons: `docs/rls-policies.md#round-participations` |
 
 ## ⚖️ Contraintes métier (DB & applicatif)
 
@@ -282,8 +282,8 @@ Détails: `docs/db-indexes-triggers.md`.
   - `prompts.is_enabled` (bool par défaut true) pour activer/désactiver un prompt.
   - `prompts.audience_tag_id` (FK → `prompt_tags.id`) pour la facette Audience.
   - `group_prompt_blocks(group_id, prompt_id)` avec contrainte d’unicité pour la blocklist V1.
-  - Index RLS de participation: composites sur `submissions` et `round_votes` pour la visibilité conditionnelle.
-  - Optionnel V1.1: vue matérialisée `round_participations` (UNIQUE (round_id, user_id)) rafraîchie planifié.
+  - Visibilité après participation basée sur `round_participations` (UNIQUE `(round_id, user_id)`) + index dédiés sur `submissions`/`round_votes`.
+  - Optionnel: vue matérialisée `round_participations` (UNIQUE (round_id, user_id)) rafraîchie planifié.
 -
 Voir les fichiers de migration pour les détails d’implémentation.
 

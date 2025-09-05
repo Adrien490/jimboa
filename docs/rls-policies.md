@@ -52,27 +52,6 @@ $$;
 GRANT EXECUTE ON FUNCTION is_member(uuid) TO authenticated;
 ```
 
-## Fonction de participation
-
-```sql
-CREATE OR REPLACE FUNCTION user_has_participated(round_id UUID, user_id UUID)
-RETURNS BOOLEAN
-LANGUAGE plpgsql STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM submissions s WHERE s.round_id = user_has_participated.round_id AND s.author_id = user_has_participated.user_id
-  ) OR EXISTS (
-    SELECT 1 FROM round_votes v WHERE v.round_id = user_has_participated.round_id AND v.voter_id = user_has_participated.user_id
-  );
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION user_has_participated(uuid, uuid) TO authenticated;
-```
-
 ## Politique type (ex: comments)
 
 ```sql
@@ -83,7 +62,10 @@ USING (
     /* Archives accessibles aux membres actuels */
     (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
     /* Ou visibilité après participation (soumission OU vote) */
-    OR user_has_participated(comments.round_id, auth.uid())
+    OR EXISTS (
+      SELECT 1 FROM round_participations rp
+      WHERE rp.round_id = comments.round_id AND rp.user_id = auth.uid()
+    )
   )
 )
 ```
@@ -100,14 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_submissions_round_author ON submissions(round_id,
 CREATE INDEX IF NOT EXISTS idx_round_votes_round_voter ON round_votes(round_id, voter_id);
 CREATE INDEX IF NOT EXISTS idx_daily_rounds_group_source_open_at ON daily_rounds(group_id, source_prompt_id, open_at DESC);
 
--- (Optionnel V1.1)
-CREATE MATERIALIZED VIEW IF NOT EXISTS round_participations AS
-SELECT DISTINCT round_id, author_id AS user_id FROM submissions
-UNION
-SELECT DISTINCT round_id, voter_id AS user_id FROM round_votes;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_round_participations_unique
-  ON round_participations(round_id, user_id);
+-- Voir section round_participations pour le schéma + index dédiés
 ```
 
 ## Sécurité
@@ -117,18 +92,120 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_round_participations_unique
 
 Voir aussi: `docs/data-model.md#-row-level-security-rls---visibilité-conditionnelle`.
 
-## Tables/Views auxiliaires pour la participation (optionnel v1, recommandé v1.1)
+## round_participations — Pourquoi c’est utile (v1)
+<a id="round-participations"></a>
 
-Deux approches pour accélérer la règle « visible après participation »:
+- RLS plus rapides et plus simples: remplace deux EXISTS (soumissions/votes) par un seul EXISTS sur une petite table indexée `(round_id, user_id)`.
+- Unifie la règle « visibilité après participation » pour `submissions`, `comments`, `round_votes` avec le même plan.
+- Robuste aux soft delete: si une soumission est soft‑deleted, la participation reste vraie.
+- Compteurs & UX en O(1): `participants_count` rapide; “Tu as participé ?” sans toucher aux tables lourdes.
+- Temps réel plus net: une seule subscription (INSERT sur `round_participations`) débloque l’UI post‑participation.
 
-- Table `round_participations(round_id uuid, user_id uuid, created_at timestamptz)`
-  - Remplie par triggers `AFTER INSERT` sur `submissions` et `round_votes` (UPSERT)
-  - Index/contraintes: `UNIQUE(round_id, user_id)`, index sur `(round_id)`
-- Vue matérialisée `round_participations` (UNION DISTINCT `submissions`/`round_votes`), rafraîchie périodiquement
+### Comment ça marche (v1)
 
-Policies deviennent: `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = ... AND rp.user_id = auth.uid())`.
+Schéma minimal:
 
-Voir indexes/triggers: `docs/db-indexes-triggers.md#interactions` et `docs/db-indexes-triggers.md#rounds-triggers`.
+```sql
+CREATE TABLE round_participations(
+  round_id uuid NOT NULL,
+  user_id  uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (round_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_round_participations_round ON round_participations(round_id);
+```
+
+Alimentation (idempotente):
+
+```sql
+-- Après insertion d’une soumission
+CREATE TRIGGER rp_from_submissions
+AFTER INSERT ON submissions
+FOR EACH ROW EXECUTE FUNCTION rp_upsert_from_submission();
+
+-- Après insertion d’un vote
+CREATE TRIGGER rp_from_votes
+AFTER INSERT ON round_votes
+FOR EACH ROW EXECUTE FUNCTION rp_upsert_from_vote();
+
+-- Fonctions d’UPSERT (esprit)
+CREATE OR REPLACE FUNCTION rp_upsert_from_submission() RETURNS trigger AS $$
+BEGIN
+  INSERT INTO round_participations(round_id, user_id)
+  VALUES (NEW.round_id, NEW.author_id)
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION rp_upsert_from_vote() RETURNS trigger AS $$
+BEGIN
+  INSERT INTO round_participations(round_id, user_id)
+  VALUES (NEW.round_id, NEW.voter_id)
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+```
+
+Jamais de DELETE sur `round_participations` en cas de soft delete de contenu.
+
+Policies RLS (exemple comments):
+
+```sql
+USING (
+  is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))
+  AND (
+    (SELECT status FROM daily_rounds WHERE id = comments.round_id) = 'closed'
+    OR EXISTS (
+      SELECT 1 FROM round_participations rp
+      WHERE rp.round_id = comments.round_id AND rp.user_id = auth.uid()
+    )
+  )
+)
+```
+
+Même logique copiée pour `submissions` et `round_votes`.
+
+Usages additionnels concrets:
+
+- Feed: tag “Participé / Pas encore” sans jointures lourdes.
+- Notifications: ne pas pousser ceux qui ont déjà participé.
+- Insights admin: taux de participation par jour/groupe sans scanner médias/réponses.
+- Anti‑doublon logique: vote puis réponse (ou inverse) → 1 seule ligne (PK).
+
+Alternatives & arbitrage:
+
+- Sans table: fonction/VIEW matérialisée `UNION DISTINCT` `submissions`/`round_votes`.
+  - ✅ pas de table en plus
+  - ❌ OR entre deux grosses tables, plans variables, coûts qui montent avec l’historique
+- Avec table (obligatoire en v1):
+  - ✅ RLS stables, rapides, simples
+  - ✅ Résilient aux soft deletes
+  - ✅ Parfait pour les compteurs
+  - 🔸 Besoin de 2 triggers (submissions, votes)
+
+Détails de solidité:
+
+- Concurrence: UPSERT sur PK `(round_id, user_id)` est sûr.
+- Sécurité: INSERT via triggers/worker (service role). SELECT soumis aux règles d’appartenance; possible de joindre `daily_rounds` en lecture.
+
+Migration (backfill) simple:
+
+```sql
+INSERT INTO round_participations(round_id, user_id)
+SELECT round_id, author_id FROM submissions
+UNION
+SELECT round_id, voter_id  FROM round_votes
+ON CONFLICT DO NOTHING;
+```
+
+Références: indexes/triggers liés dans `docs/db-indexes-triggers.md#interactions` et `#rounds-triggers`.
+
+### Risques / garde‑fous
+
+- Dérive de vérité: si l’INSERT de participation échoue mais que la soumission/le vote est créé.
+  - Mitigation: triggers dans la même transaction (par défaut en DB) et métrique “submissions+votes ≈ participations” (écarts alertés).
+- Suppression: ne jamais supprimer de lignes de `round_participations` lors d’un soft‑delete de contenu.
+- Sécurité: interdire aux clients d’écrire directement dans `round_participations` (INSERT via triggers/serveur uniquement). Mettre RLS strict: aucun INSERT/UPDATE/DELETE pour `authenticated`.
 
 ## Storage (Supabase) — voir `docs/infra-setup.md`
 
@@ -236,7 +313,7 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 
 ### submissions
 
-- SELECT: membre `active` du groupe du round via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = submissions.round_id))` ET (round `closed` OU `user_has_participated(round_id, auth.uid())`).
+- SELECT: membre `active` du groupe du round via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = submissions.round_id))` ET (round `closed` OU `EXISTS (SELECT 1 FROM round_participations rp WHERE rp.round_id = submissions.round_id AND rp.user_id = auth.uid())`).
 - INSERT: membre actif du groupe (contrôle membership + statut round `open`). Unicité `(round_id, author_id)`.
 - UPDATE: auteur non autorisé (soumission définitive); owner/admin: soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
@@ -249,14 +326,14 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 
 ### comments
 
-- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))` + fermé OU participation).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = comments.round_id))` + fermé OU participation via `round_participations`).
 - INSERT: membre actif du groupe ET round non fermé.
 - UPDATE: auteur avant fermeture; après fermeture: owner/admin uniquement pour soft delete (`deleted_by_admin`, `deleted_at`).
 - DELETE: interdit (soft delete uniquement).
 
 ### round_votes
 
-- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = round_votes.round_id))` + fermé OU participation).
+- SELECT: mêmes règles que `submissions` (membre `active` via `is_member((SELECT dr.group_id FROM daily_rounds dr WHERE dr.id = round_votes.round_id))` + fermé OU participation via `round_participations`).
 - INSERT: membre actif du groupe, round type vote, contrainte UNIQUE `(round_id, voter_id)`.
 - UPDATE/DELETE: interdits (votes définitifs; triggers bloquent toute modification/suppression).
 
@@ -279,6 +356,11 @@ Nota: Les verbes sont donnés sous l’angle des rôles applicatifs (utilisateur
 - INSERT: owner du groupe (initiateur).
 - UPDATE: destinataire (accept/reject) via action serveur atomique.
 - DELETE: serveur (expiration/annulation) ou owner si pending.
+
+### round_participations
+
+- SELECT: membres du groupe du round uniquement (via jointure `daily_rounds` → `group_id` et `is_member(...)`).
+- INSERT/UPDATE/DELETE: aucun pour `authenticated` (INSERT réalisés par triggers/worker en service role uniquement).
 
 ## Triggers & Intégrité (résumé)
 
