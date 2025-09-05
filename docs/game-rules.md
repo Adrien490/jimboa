@@ -50,6 +50,7 @@ graph LR
     - Si le groupe a activé "Autoriser la banque globale": étendre les candidats aux prompts globaux approuvés (`scope='global'`).
     - Une fois le prompt choisi, écrire un **snapshot immuable inline** dans `daily_rounds` (champs `source_prompt_id`, `resolved_*`).
     - Règles communes: anti‑répétition (fenêtre N=7), respect `min_group_size`/`max_group_size`, préférence d’audience si définie.
+  - **Blocklist par groupe** : les owners/admins peuvent exclure des prompts de la sélection via `group_prompt_blocks`; cela n'affecte pas les archives.
 
 Filtrage audience (optionnel v1.1)
 

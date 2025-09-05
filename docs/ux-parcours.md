@@ -234,7 +234,7 @@ app/
               actions.ts          # SA: updateLocalPrompt / toggleEnabled (champ is_enabled)
           prompts/                # Modération des prompts locaux (filtre status=pending)
             page.tsx
-            actions.ts            # SA: approve/reject (crée group_prompt)
+            actions.ts            # SA: approve/reject (met à jour le statut du prompt)
 
         rounds/
           page.tsx                # Historique des manches (fermées/ ouvertes)

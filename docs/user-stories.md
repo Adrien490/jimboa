@@ -782,6 +782,39 @@ Et si approuvé, le prompt devient disponible dans la banque globale
 
 ---
 
+### E7 — Exclure un prompt de la sélection du groupe (blocklist)
+
+**En tant que** owner/admin de groupe  
+**Je veux** bloquer ou débloquer certains prompts pour mon groupe  
+**Afin de** éviter que des prompts non souhaités soient sélectionnés automatiquement
+
+#### Critères d'acceptation
+
+```gherkin
+Étant donné un prompt (local ou global) visible dans mon groupe
+Quand je clique "Bloquer pour mon groupe"
+Alors une entrée est créée dans `group_prompt_blocks(group_id, prompt_id)` (UNIQUE)
+Et ce prompt est exclu des candidats de sélection quotidienne pour ce groupe
+
+Étant donné un prompt bloqué pour mon groupe
+Quand je clique "Débloquer"
+Alors l'entrée correspondante est supprimée de `group_prompt_blocks`
+Et le prompt redevient éligible à la sélection (sous réserve des autres filtres)
+
+Étant donné des filtres actifs (anti‑répétition N=7, audience, min/max_group_size)
+Quand la sélection s'exécute
+Alors la blocklist du groupe est appliquée avant le tirage aléatoire
+```
+
+#### Règles métier
+
+- **Portée** : La blocklist affecte uniquement la sélection automatique; les rounds passés ne sont pas altérés.
+- **Candidats** : S'applique aux prompts locaux approuvés/activés et aux prompts globaux approuvés si `allow_global_prompts=true`.
+- **Unicité** : `UNIQUE(group_id, prompt_id)` empêche les doublons.
+- **Priorité** : La blocklist est appliquée en plus des autres filtres (anti‑répétition, audience, min/max_group_size).
+
+---
+
 ## EPIC F — Cycle de vie d'une manche (round)
 
 ### F1 — Créer automatiquement les manches quotidiennes
@@ -799,8 +832,8 @@ Et sélectionner aléatoirement un prompt local approuvé et activé (`prompts.s
 Et éviter les 7 derniers prompts utilisés par le groupe (fenêtre anti-répétition)
 Et programmer l'ouverture selon drop_time du groupe (heure française)
 Et s'il n'existe pas encore de daily_round pour (group_id, scheduled_for_local_date=J)
-Et si aucun prompt local approuvé et activé n'est disponible, ignorer progressivement la fenêtre anti‑répétition (jusqu'à 0) pour garantir une sélection
-Et s'il n'existe toujours aucun prompt éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
+Et si moins de N prompts actifs sont disponibles, sélectionner parmi tous les prompts actifs (la fenêtre anti‑répétition ne s'applique plus faute de volume)
+Et si après application des filtres (blocklist, audience, min/max_group_size) aucun prompt n'est éligible, créer le round sans snapshot et ne pas envoyer de notification tant que le snapshot n'est pas créé
 ```
 
 #### Règles métier
@@ -809,7 +842,7 @@ Et s'il n'existe toujours aucun prompt éligible, créer le round sans snapshot 
 - **Invariant simple** : Création d'un round pour le jour J à J-1, à l'heure drop_time
 - **Une seule manche par jour local** par groupe : UNIQUE(group_id, scheduled_for_local_date)
 - **Sélection intelligente** des prompts avec rotation (N=7 derniers exclus, paramétrable)
-- **Fallback défini** : si aucun prompt éligible, la fenêtre anti‑répétition est réduite; si 0 prompt, le round est créé sans snapshot et l'ouverture est différée jusqu'à création du snapshot
+- **Fallback défini** : si moins de N prompts actifs, choisir parmi tous; si 0 prompt éligible après filtres, le round est créé sans snapshot et l'ouverture est différée jusqu'à création du snapshot
 
 ---
 
