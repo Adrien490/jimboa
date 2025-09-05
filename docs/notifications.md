@@ -29,7 +29,7 @@ flowchart TD
 
 Sémantique:
 
-- `mute=true` bloque toute notification (push) pour le couple (user, group)
+- `mute=true` bloque toute notification (push) pour la paire (user, group)
 - `push=false` désactive le canal push (aucun autre canal n'est utilisé)
 
 ## 📱 Architecture des notifications

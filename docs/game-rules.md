@@ -25,7 +25,6 @@ graph LR
 
 ### 👥 Gestion des groupes
 
-- **Types** : `friends` ou `couple`
 - **Rôles** : `owner` unique / `admin` / `member`
 - **Invitations** : Code permanent modifiable, généré automatiquement
 - **Nom et image modifiables** : Nom et avatar personnalisables par owner/admin

@@ -150,17 +150,17 @@ Et si user_group_prefs.push=false alors aucune notification n'est envoyée
 
 ## EPIC C — Groupes (création, rôles, invitations)
 
-### C1 — Créer un groupe (friends/couple)
+### C1 — Créer un groupe
 
 **En tant qu'** utilisateur  
-**Je veux** créer un groupe avec un type et une image  
+**Je veux** créer un groupe avec un nom et une image  
 **Afin de** jouer avec mon cercle avec une identité visuelle
 
 #### Critères d'acceptation
 
 ```gherkin
 Étant donné un utilisateur U
-Quand je crée le groupe {name, type, image_path?}
+Quand je crée le groupe {name, image_path?}
 Alors groups est créé avec owner_id=U, et U est inséré dans group_members avec role='owner'
 Et si une image est fournie, elle est stockée dans image_path
 ```

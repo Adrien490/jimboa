@@ -5,7 +5,7 @@
 ## 🌟 Positionnement
 
 - **Léger** : Rituel simple de 5-10 minutes par jour
-- **Intime** : Groupes privés (amis proches, couples)
+- **Intime** : Groupes privés
 - **Fun** : Prompts variés et interactions spontanées
 - **Sans pression** : Pas de classement global ni de métriques intrusives
 
@@ -17,15 +17,10 @@ Chaque jour, un prompt unique (question, vote, challenge) est proposé au groupe
 
 ### 🎯 Personas cibles
 
-#### 👫 Amis proches
+#### 👥 Cercles privés
 
-- **Besoin** : Garder le lien au quotidien avec un rituel simple et amusant
-- **Contexte** : Vies chargées, envie de maintenir la proximité sans contrainte
-
-#### 💑 Couples
-
-- **Besoin** : Entretenir complicité et conversation légère sans pression
-- **Contexte** : Routine quotidienne, recherche de nouveaux sujets de discussion
+- **Besoin** : Garder le lien au quotidien avec un rituel simple et amusant; entretenir la complicité et des conversations légères sans pression
+- **Contexte** : Vies chargées et routines quotidiennes; envie de proximité sans contrainte
 
 ### 🎪 Jobs-to-be-done
 
